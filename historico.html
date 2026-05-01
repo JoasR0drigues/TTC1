@@ -1,0 +1,104 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Histórico de movimentações</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+  <header class="topo">
+    <div class="logo-texto">
+      <span class="logo-destaque">Proteção</span> Patrimonial RFID
+    </div>
+
+    <nav class="menu">
+    <a href="patrimonios.html">Patrimônios</a>
+    <a href="historico.html" class="ativo">Histórico</a>
+    <a href="salas-vinculadas.html">Salas Vinculadas</a>
+    <a href="monitoramento-ultrassonico.html">Monitoramento Ultrassônico</a>
+    </nav>
+  </header>
+
+  <main>
+    <section class="card historico-card">
+    <h2>Histórico de movimentações</h2>
+    <p class="historico-subtitulo">
+    Histórico consolidado de entradas, saídas, cadastros e movimentações de patrimônios.
+    </p>
+
+      <div class="historico-busca">
+    <label for="busca-historico">Buscar no histórico</label>
+
+       <div class="campo-busca">
+    <span class="icone-busca">🔍</span>
+    <input
+    type="text"
+    id="busca-historico"
+    placeholder="Pesquisar por patrimônio, código, UID, tipo, responsável ou localização">
+    <button type="button" class="btn-limpar">×</button>
+    </div>
+    </div>
+
+      <div class="tabela-wrapper">
+    <table class="tabela-historico">
+    <thead>
+    <tr>
+    <th>Data/Hora</th>
+    <th>Tipo</th>
+    <th>Patrimônio</th>
+    <th>UID</th>
+    <th>Confirmado por</th>
+    <th>Localização</th>
+    <th>Ações</th>
+    </tr>
+    </thead>
+    <tbody>
+    <tr>
+    <td>01/05/2026, 10:26:11</td>
+    <td><span class="tipo-badge tipo-entrada">entrada</span></td>
+    <td>
+    <div class="patrimonio-info">
+    <strong>CADEIRA</strong>
+    <span>COD-001</span>
+    </div>
+    </td>
+    <td>33 9D F7 0D</td>
+    <td>joas</td>
+    <td>dentro do recinto</td>
+    <td>
+    <div class="acoes-tabela">
+    <button class="btn-acao btn-editar">Editar</button>
+    <button class="btn-acao btn-excluir">Excluir histórico</button>
+    </div>
+    </td>
+    </tr>
+
+    <tr>
+    <td>01/05/2026, 10:26:04</td>
+    <td><span class="tipo-badge tipo-cadastro">cadastro</span></td>
+    <td>
+    <div class="patrimonio-info">
+    <strong>CADEIRA</strong>
+    <span>COD-001</span>
+    </div>
+    </td>
+    <td>33 9D F7 0D</td>
+    <td>joas</td>
+    <td>Sala de estar</td>
+    <td>
+    <div class="acoes-tabela">
+    <button class="btn-acao btn-editar">Editar</button>
+    <button class="btn-acao btn-excluir">Excluir histórico</button>
+    </div>
+    </td>
+    </tr>
+    </tbody>
+    </table>
+    </div>
+    </section>
+  </main>
+
+</body>
+</html>

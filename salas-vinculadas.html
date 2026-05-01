@@ -1,0 +1,127 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Salas Vinculadas</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+  <header class="topo">
+    <div class="logo-texto">
+      <span class="logo-destaque">Proteção</span> Patrimonial RFID
+    </div>
+
+    <nav class="menu">
+      <a href="patrimonios.html">Patrimônios</a>
+      <a href="historico.html">Histórico</a>
+      <a href="salas-vinculadas.html" class="ativo">Salas Vinculadas</a>
+      <a href="monitoramento-ultrassonico.html">Monitoramento Ultrassônico</a>
+    </nav>
+  </header>
+
+  <main class="salas-layout">
+
+    <section class="card sala-card">
+      <h2>Cadastrar local e sala</h2>
+      <p class="sala-subtitulo">
+        Crie os ambientes para organizar os patrimônios por local e sala.
+      </p>
+
+      <form class="form-sala">
+        <div class="campo">
+        <label for="nome-local">Nome do local</label>
+        <input type="text" id="nome-local" name="nome-local" placeholder="Ex: Bloco Administrativo">
+        </div>
+
+        <div class="campo">
+        <label for="sala-especifica">Sala específica</label>
+        <input type="text" id="sala-especifica" name="sala-especifica" placeholder="Ex: Sala 01">
+        </div>
+
+        <div class="botoes">
+        <button type="submit" class="btn btn-primario">Criar sala</button>
+        </div>
+      </form>
+    </section>
+
+    <section class="card sala-card">
+      <h2>Vincular patrimônio em sala</h2>
+      <p class="sala-subtitulo">
+        Escolha uma sala e um patrimônio para definir a localização padrão.
+      </p>
+
+      <form class="form-sala">
+        <div class="campo">
+        <label for="sala-cadastrada">Sala cadastrada</label>
+        <select id="sala-cadastrada" name="sala-cadastrada">
+        <option>Selecione uma sala</option>
+        <option>Bloco Administrativo - Sala 01</option>
+        <option>Bloco Administrativo - Sala 02</option>
+        <option>Recepção - Sala Principal</option>
+        </select>
+        </div>
+
+        <div class="campo">
+        <label for="patrimonio-vinculo">Patrimônio</label>
+        <select id="patrimonio-vinculo" name="patrimonio-vinculo">
+        <option>Selecione um patrimônio</option>
+        <option>CADEIRA - COD-001</option>
+        <option>MESA - COD-002</option>
+        <option>NOTEBOOK - COD-003</option>
+        </select>
+        </div>
+
+        <div class="botoes">
+        <button type="submit" class="btn btn-vincular">Vincular patrimônio</button>
+        </div>
+      </form>
+    </section>
+
+    <section class="card sala-card">
+      <h2>Salas vinculadas</h2>
+
+      <div class="campo">
+        <label for="buscar-sala">Buscar sala</label>
+        <input type="text" id="buscar-sala" name="buscar-sala" placeholder="Ex: Bloco A ou Sala 01">
+      </div>
+
+      <div class="sala-vazia">
+        Nenhuma sala encontrada.
+      </div>
+    </section>
+
+    <section class="card sala-card">
+      <h2>Patrimônios da sala</h2>
+      <p class="sala-subtitulo">
+        Nenhuma sala disponível para exibir patrimônios vinculados.
+      </p>
+
+      <div class="botoes">
+        <button type="button" class="btn btn-excluir-sala">Excluir sala selecionada</button>
+      </div>
+
+    <div class="tabela-wrapper tabela-sala-wrapper">
+    <table class="tabela-sala">
+    <thead>
+    <tr>
+    <th>Código</th>
+    <th>Patrimônio</th>
+    <th>Status</th>
+    <th>Localização</th>
+    </tr>
+    </thead>
+    <tbody>
+    <tr>
+    <td colspan="4" class="tabela-vazia">Nenhum patrimônio vinculado.</td>
+    </tr>
+    </tbody>
+    </table>
+    </div>
+    </section>
+
+  </main>
+
+</body>
+</html>
