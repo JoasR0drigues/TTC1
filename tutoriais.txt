@@ -1,0 +1,36 @@
+Atualizar build web:
+npm run copy:web
+Publicar web + regras:
+npx firebase-tools deploy --only hosting,database
+Se estiver testando no Android:
+npm run android:sync
+Rebuild do app no Android Studio.
+
+
+|||||||||||||||||||||||||INSTALANDO GIT HUB|||||||||||||||||
+git status
+git add .
+git commit -m "primeiro commit"
+git push -u origin main
+
+
+|||||||||||||||INSTALANDO FIREBASE|||||||||||||||||||||||||
+npm install firebase
+npm install -g firebase-tools
+firebase login
+cd sua-pasta-do-projeto
+firebase use --add
+firebase init hosting
+firebase deploy --only hosting
+
+
+|||||||||||||||||||GERANDO O APP||||||||||||||||||||||||||||
+npm init -y
+npm install @capacitor/core
+npm install -D @capacitor/cli
+npx cap init
+npm install @capacitor/android
+npx cap add android
+npx cap sync
+npx cap open android
+
