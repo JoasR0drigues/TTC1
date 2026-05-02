@@ -12,7 +12,7 @@
 
     "usuarios": {
       "$uidTag": {
-        ".read": "auth != null && data.child('vinculado_ao_usuario').val() === auth.uid",
+        ".read": "auth != null && data.child('vinculado_ao_usuario').val() === auth.uid || auth == null",
         ".write": "auth != null && ((!data.exists() && newData.child('vinculado_ao_usuario').val() === auth.uid) || (data.exists() && data.child('vinculado_ao_usuario').val() === auth.uid))"
       }
     },
@@ -26,7 +26,7 @@
 
     "tags_patrimonio": {
       "$uidTag": {
-        ".read": "auth != null && data.child('vinculado_ao_usuario').val() === auth.uid",
+        ".read": "auth != null && data.child('vinculado_ao_usuario').val() === auth.uid || auth == null",
         ".write": "auth != null && ((!data.exists() && newData.child('vinculado_ao_usuario').val() === auth.uid) || (data.exists() && data.child('vinculado_ao_usuario').val() === auth.uid))"
       }
     },
@@ -72,19 +72,23 @@
     "leituras_recentes": {
       ".indexOn": ["timestamp"],
       "$leituraId": {
-        ".read": "auth != null && data.child('usuario_uid').val() === auth.uid",
-        ".write": "auth != null && newData.child('usuario_uid').val() === auth.uid"
+        ".read": "auth != null",
+        ".write": "(auth != null && newData.child('usuario_uid').val() === auth.uid) || (auth == null && newData.hasChildren(['uid', 'timestamp']))"
       }
     },
 
     "acessos": {
       "$acessoId": {
-        ".read": "auth != null && data.child('usuario_uid').val() === auth.uid",
-        ".write": "auth != null && newData.child('usuario_uid').val() === auth.uid"
+        ".read": "auth != null",
+        ".write": "(auth != null && newData.child('usuario_uid').val() === auth.uid) || (auth == null && newData.hasChildren(['uid', 'timestamp']))"
       }
     },
 
     "teste_conexao": {
+      "status": {
+        ".read": "auth != null",
+        ".write": "true"
+      },
       "$uid": {
         ".read": "auth != null && auth.uid === $uid",
         ".write": "auth != null && auth.uid === $uid"

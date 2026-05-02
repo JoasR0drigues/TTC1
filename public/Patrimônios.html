@@ -13,7 +13,6 @@
     </div>
 
     <nav class="menu">
-      <a href="Login.HTML">Início</a>
       <a href="Patrimônios.html" class="ativo">Patrimônios</a>
       <a href="historico.html">Histórico</a>
       <a href="salas-vinculadas.html">Salas Vinculadas</a>
@@ -32,7 +31,7 @@
       <p><strong>Status:</strong> <span id="leitura-status">--</span></p>
     </section>
 
-    <section class="card">
+    <section class="card" data-role-required="admin">
       <h2>Confirmar movimentação</h2>
       <p>Digite a tag RFID e confirme se o objeto está entrando ou saindo.</p>
       <div class="campo">
@@ -216,6 +215,42 @@
         });
     }
 
+    function observarLeiturasRFID() {
+      db.ref("leituras_recentes")
+        .limitToLast(20)
+        .on("value", (snapshot) => {
+          const leituras = snapshot.val() || {};
+          let ultimaLeitura = null;
+
+          Object.values(leituras).forEach((item) => {
+            if (!item) return;
+            if (!ultimaLeitura || Number(item.timestamp || 0) > Number(ultimaLeitura.timestamp || 0)) {
+              ultimaLeitura = item;
+            }
+          });
+
+          if (!ultimaLeitura) return;
+
+          const uidLido = ultimaLeitura.uid || ultimaLeitura.uid_tag || "";
+          const patrimonioLocal = buscarPatrimonioPorTag(uidLido);
+
+          atualizarCardLeitura({
+            uid: uidLido,
+            tipo: ultimaLeitura.tipo_tag || "desconhecida",
+            patrimonioNome: ultimaLeitura.patrimonio_nome || patrimonioLocal?.nome || "Nenhum patrimônio identificado",
+            patrimonioCodigo: ultimaLeitura.patrimonio_codigo || patrimonioLocal?.codigo || "--",
+            status: ultimaLeitura.objeto_detectado ? "detectado" : "aguardando"
+          });
+
+          if (sessao?.role === "admin" && refs.tagRfidInput) {
+            refs.tagRfidInput.value = formatarTag(uidLido);
+          }
+          if (sessao?.role === "admin" && refs.tagMovInput) {
+            refs.tagMovInput.value = formatarTag(uidLido);
+          }
+        });
+    }
+
     function buscarPatrimonioPorTag(uidTag) {
       const uidNormalizada = normalizarTag(uidTag);
       return estado.patrimonios.find((item) => normalizarTag(item.uid_tag) === uidNormalizada) || null;
@@ -342,16 +377,16 @@
         await garantirUsuarioFirebase();
         await registrarPerfilSistema();
         observarPatrimonios();
-        refs.movimentacaoMsg.textContent = "Firebase conectado.";
+        observarLeiturasRFID();
+        refs.movimentacaoMsg.textContent = "";
       } catch (erro) {
         refs.movimentacaoMsg.textContent = "Falha ao conectar com Firebase. Verifique as regras.";
       }
     }
 
-    refs.btnEntrando.addEventListener("click", () => confirmarMovimentacao("entrada"));
-    refs.btnSaindo.addEventListener("click", () => confirmarMovimentacao("saida"));
-
     if (sessao && sessao.role === "admin") {
+      refs.btnEntrando.addEventListener("click", () => confirmarMovimentacao("entrada"));
+      refs.btnSaindo.addEventListener("click", () => confirmarMovimentacao("saida"));
       refs.formPatrimonio.addEventListener("submit", cadastrarPatrimonio);
     }
 

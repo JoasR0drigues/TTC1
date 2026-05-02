@@ -95,6 +95,17 @@ button {
   box-shadow: 0 6px 16px rgba(124, 106, 184, 0.25);
 }
 
+.menu a.menu-logout {
+  background: var(--danger);
+  color: #ffffff;
+  box-shadow: 0 6px 16px rgba(201, 107, 118, 0.25);
+}
+
+.menu a.menu-logout:hover {
+  background: #b95763;
+  color: #ffffff;
+}
+
 main,
 .hero,
 .conteudo-login,

@@ -162,6 +162,26 @@
     });
   }
 
+  function adicionarBotaoLogout(session) {
+    if (!session) return;
+    const menu = document.querySelector(".menu");
+    if (!menu) return;
+
+    const jaExiste = document.getElementById("btn-logout-menu");
+    if (jaExiste) return;
+
+    const botao = document.createElement("a");
+    botao.id = "btn-logout-menu";
+    botao.className = "menu-logout";
+    botao.href = "#";
+    botao.textContent = "Deslogar";
+    botao.addEventListener("click", function (event) {
+      event.preventDefault();
+      logout();
+    });
+    menu.appendChild(botao);
+  }
+
   function protegerPagina(opcoes) {
     const config = opcoes || {};
     const allowAnonymous = !!config.allowAnonymous;
@@ -184,6 +204,7 @@
 
     aplicarMenuPorRole(session ? session.role : "");
     aplicarRestricoesVisuais(session ? session.role : "");
+    adicionarBotaoLogout(session);
     return session;
   }
 
