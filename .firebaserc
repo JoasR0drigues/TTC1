@@ -1,6 +1,6 @@
 {
   "projects": {
-    "default": "tcc-prototipo-de-patrimonio",
+    "default": "protecao-patrimonial",
     "principal": "protecao-patrimonial"
   },
   "targets": {},
