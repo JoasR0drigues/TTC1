@@ -57,7 +57,7 @@
       <p id="movimentacao-msg">Sem movimentação confirmada.</p>
     </section>
 
-    <section class="card">
+    <section class="card" data-role-required="admin">
       <h2>Cadastrar patrimônio</h2>
       <form class="form-patrimonio" id="form-patrimonio">
         <div class="campo">
@@ -119,7 +119,10 @@
     </section>
   </main>
 
+  <script src="auth.js"></script>
   <script>
+    const sessao = AuthApp.protegerPagina({ allowedRoles: ["admin", "comum"] });
+
     const estado = {
       esp32Url: localStorage.getItem("esp32Url") || "",
       ultimaLeitura: null,
@@ -308,7 +311,10 @@
 
     refs.btnEntrando.addEventListener("click", () => confirmarMovimentacao("entrando"));
     refs.btnSaindo.addEventListener("click", () => confirmarMovimentacao("saindo"));
-    refs.formPatrimonio.addEventListener("submit", cadastrarPatrimonio);
+
+    if (sessao && sessao.role === "admin") {
+      refs.formPatrimonio.addEventListener("submit", cadastrarPatrimonio);
+    }
 
     refs.esp32Url.value = estado.esp32Url;
     renderTabela();

@@ -23,21 +23,27 @@
     <section class="card">
       <h2>Entrar</h2>
 
-      <form>
+      <form id="form-login">
         <div class="campo">
         <label for="email">Usuário</label>
-        <input type="email" id="email" name="email" placeholder="Digite seu e-mail">
+        <input type="email" id="email" name="email" placeholder="Digite seu e-mail" required>
         </div>
 
         <div class="campo">
         <label for="senha">Senha</label>
-        <input type="password" id="senha" name="senha" placeholder="Digite sua senha">
+        <input type="password" id="senha" name="senha" placeholder="Digite sua senha" required>
+        </div>
+
+        <div class="campo">
+        <label for="tag-admin">Tag UID (obrigatória para admin)</label>
+        <input type="text" id="tag-admin" name="tag-admin" placeholder="Ex: 33 9D F7 0D">
         </div>
 
         <div class="botoes">
         <button type="submit" class="btn btn-primario">Entrar</button>
-        <a href="sobre.html" class="btn btn-secundario">Criar conta</a>
+        <a href="criarconta.html" class="btn btn-secundario">Criar conta</a>
         </div>
+        <p id="login-msg">Use admin@rfid.com / admin123 com tag, ou usuario@rfid.com / usuario123.</p>
       </form>
     </section>
 
@@ -48,5 +54,33 @@
     </section>
   </main>
 
+  <script src="auth.js"></script>
+  <script>
+    const sessaoAtual = AuthApp.protegerPagina({ allowAnonymous: true });
+    if (sessaoAtual) {
+      window.location.href = sessaoAtual.role === "admin" ? "Patrimônios.html" : "historico.html";
+    }
+
+    const formLogin = document.getElementById("form-login");
+    const loginMsg = document.getElementById("login-msg");
+
+    formLogin.addEventListener("submit", function (event) {
+      event.preventDefault();
+      const email = document.getElementById("email").value;
+      const senha = document.getElementById("senha").value;
+      const tag = document.getElementById("tag-admin").value;
+
+      const resultado = AuthApp.login(email, senha, tag);
+      if (!resultado.ok) {
+        loginMsg.textContent = resultado.mensagem;
+        loginMsg.style.color = "#9b3f4d";
+        return;
+      }
+
+      loginMsg.textContent = "Login realizado com sucesso.";
+      loginMsg.style.color = "#2f6b4f";
+      window.location.href = resultado.user.role === "admin" ? "Patrimônios.html" : "historico.html";
+    });
+  </script>
 </body>
 </html>

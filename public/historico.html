@@ -51,7 +51,7 @@
     <th>UID</th>
     <th>Confirmado por</th>
     <th>Localização</th>
-    <th>Ações</th>
+    <th data-role-required="admin">Ações</th>
     </tr>
     </thead>
     <tbody>
@@ -67,8 +67,8 @@
     <td></td>
     <td></td>
     <td></td>
-    <td>
-    <div class="acoes-tabela">
+    <td data-role-required="admin">
+    <div class="acoes-tabela" data-role-required="admin">
     <button class="btn-acao btn-editar">Editar</button>
     <button class="btn-acao btn-excluir">Excluir histórico</button>
     </div>
@@ -87,8 +87,8 @@
     <td></td>
     <td></td>
     <td></td>
-    <td>
-    <div class="acoes-tabela">
+    <td data-role-required="admin">
+    <div class="acoes-tabela" data-role-required="admin">
     <button class="btn-acao btn-editar">Editar</button>
     <button class="btn-acao btn-excluir">Excluir histórico</button>
     </div>
@@ -100,5 +100,9 @@
     </section>
   </main>
 
+  <script src="auth.js"></script>
+  <script>
+    AuthApp.protegerPagina({ allowedRoles: ["admin", "comum"] });
+  </script>
 </body>
 </html>
