@@ -24,35 +24,50 @@
 
   <main class="patrimonios-layout">
     <section class="card">
+      <h2>Conexão com ESP32</h2>
+      <p>Informe o endereço da sua placa para buscar as leituras em tempo real.</p>
+      <div class="campo">
+        <label for="esp32-url">URL da ESP32</label>
+        <input type="url" id="esp32-url" placeholder="Ex: http://192.168.0.120">
+      </div>
+      <div class="botoes">
+        <button type="button" class="btn btn-primario" id="btn-conectar-esp32">Conectar</button>
+      </div>
+      <p><strong>Status da conexão:</strong> <span id="status-conexao">Não conectado</span></p>
+    </section>
+
+    <section class="card">
       <h2>Leitura pendente</h2>
-      <p class="tag-lida">71 53 7F 05</p>
-      <p><strong>Patrimônio:</strong> Nenhum patrimônio identificado</p>
-      <p><strong>Código:</strong> --</p>
-      <p><strong>Distância:</strong> 175.2 cm</p>
-      <p><strong>Horário:</strong> 01/05/2026, 10:23:13</p>
-      <p><strong>Status:</strong> --</p>
+      <p class="tag-lida" id="uid-lida">--</p>
+      <p><strong>Tipo da tag:</strong> <span id="leitura-tipo">--</span></p>
+      <p><strong>Patrimônio:</strong> <span id="leitura-patrimonio">Nenhum patrimônio identificado</span></p>
+      <p><strong>Código:</strong> <span id="leitura-codigo">--</span></p>
+      <p><strong>Distância:</strong> <span id="leitura-distancia">--</span></p>
+      <p><strong>Horário:</strong> <span id="leitura-horario">--</span></p>
+      <p><strong>Status:</strong> <span id="leitura-status">--</span></p>
     </section>
 
     <section class="card">
       <h2>Confirmar movimentação</h2>
       <p>Quando a tag for lida, confirme se o objeto está entrando ou saindo.</p>
       <div class="acoes-movimentacao">
-        <button class="btn-status btn-entrando">Objeto entrando</button>
-        <button class="btn-status btn-saindo">Objeto saindo</button>
+        <button class="btn-status btn-entrando" id="btn-entrando" type="button">Objeto entrando</button>
+        <button class="btn-status btn-saindo" id="btn-saindo" type="button">Objeto saindo</button>
       </div>
+      <p id="movimentacao-msg">Sem movimentação confirmada.</p>
     </section>
 
     <section class="card">
       <h2>Cadastrar patrimônio</h2>
-      <form class="form-patrimonio">
+      <form class="form-patrimonio" id="form-patrimonio">
         <div class="campo">
           <label for="codigo">Código do patrimônio</label>
-          <input type="text" id="codigo" name="codigo" placeholder="Ex: PAT-001">
+          <input type="text" id="codigo" name="codigo" placeholder="Ex: PAT-001" required>
         </div>
 
         <div class="campo">
           <label for="nome_objeto">Nome do objeto</label>
-          <input type="text" id="nome_objeto" name="nome_objeto" placeholder="Ex: Mesa da sala 01">
+          <input type="text" id="nome_objeto" name="nome_objeto" placeholder="Ex: Mesa da sala 01" required>
         </div>
 
         <div class="campo">
@@ -62,7 +77,7 @@
 
         <div class="campo">
           <label for="tag_rfid">Tag RFID do objeto</label>
-          <input type="text" id="tag_rfid" name="tag_rfid" placeholder="Ex: A1 B2 C3 D4">
+          <input type="text" id="tag_rfid" name="tag_rfid" placeholder="Ex: A1 B2 C3 D4" required>
         </div>
 
         <div class="campo">
@@ -94,18 +109,213 @@
         <th>Status atual</th>
         </tr>
         </thead>
-        <tbody>
+        <tbody id="tabela-patrimonios-body">
        <tr>
-        <td>COD-001</td>
-        <td>CADEIRA</td>
-        <td>33 9D F7 0D</td>
-        <td><img src="cadeira.png" alt="Foto da cadeira" class="foto-mini"></td>
-        <td><span class="status status-dentro">dentro</span></td>
+        <td colspan="5" class="tabela-vazia">Nenhum patrimônio cadastrado.</td>
         </tr>
         </tbody>
         </table>
       </div>
     </section>
   </main>
+
+  <script>
+    const estado = {
+      esp32Url: localStorage.getItem("esp32Url") || "",
+      ultimaLeitura: null,
+      patrimonios: JSON.parse(localStorage.getItem("patrimonios") || "[]")
+    };
+
+    const refs = {
+      esp32Url: document.getElementById("esp32-url"),
+      btnConectar: document.getElementById("btn-conectar-esp32"),
+      statusConexao: document.getElementById("status-conexao"),
+      uidLida: document.getElementById("uid-lida"),
+      leituraTipo: document.getElementById("leitura-tipo"),
+      leituraPatrimonio: document.getElementById("leitura-patrimonio"),
+      leituraCodigo: document.getElementById("leitura-codigo"),
+      leituraDistancia: document.getElementById("leitura-distancia"),
+      leituraHorario: document.getElementById("leitura-horario"),
+      leituraStatus: document.getElementById("leitura-status"),
+      tagRfidInput: document.getElementById("tag_rfid"),
+      btnEntrando: document.getElementById("btn-entrando"),
+      btnSaindo: document.getElementById("btn-saindo"),
+      movimentacaoMsg: document.getElementById("movimentacao-msg"),
+      formPatrimonio: document.getElementById("form-patrimonio"),
+      tabelaBody: document.getElementById("tabela-patrimonios-body")
+    };
+
+    let intervaloPolling = null;
+
+    function normalizarBaseUrl(url) {
+      return (url || "").trim().replace(/\/+$/, "");
+    }
+
+    function definirStatusConexao(texto, cor) {
+      refs.statusConexao.textContent = texto;
+      refs.statusConexao.style.color = cor;
+      refs.statusConexao.style.fontWeight = "700";
+    }
+
+    function formatarDataHoraAgora() {
+      return new Date().toLocaleString("pt-BR");
+    }
+
+    function atualizarCardLeitura(ultimo, status, distancia) {
+      const uid = (ultimo && ultimo.uid) || "--";
+      const tipo = (ultimo && ultimo.tipo_tag) || "--";
+      const patrimonioNome = (ultimo && ultimo.patrimonio_nome) || "Nenhum patrimônio identificado";
+      const patrimonioCodigo = (ultimo && ultimo.patrimonio_codigo) || "--";
+      const statusTexto = (status && status.status) || "--";
+      const distanciaTexto = typeof distancia?.distancia === "number"
+        ? `${distancia.distancia.toFixed(1)} cm`
+        : "--";
+
+      refs.uidLida.textContent = uid || "--";
+      refs.leituraTipo.textContent = tipo;
+      refs.leituraPatrimonio.textContent = patrimonioNome;
+      refs.leituraCodigo.textContent = patrimonioCodigo;
+      refs.leituraDistancia.textContent = distanciaTexto;
+      refs.leituraStatus.textContent = statusTexto;
+      refs.leituraHorario.textContent = formatarDataHoraAgora();
+
+      if (uid && uid !== "--") {
+        refs.tagRfidInput.value = uid;
+      }
+
+      estado.ultimaLeitura = {
+        uid,
+        tipo,
+        patrimonioNome,
+        patrimonioCodigo,
+        status: statusTexto
+      };
+    }
+
+    async function buscarLeituras() {
+      if (!estado.esp32Url) return;
+      try {
+        const [ultimoRes, statusRes, distanciaRes] = await Promise.all([
+          fetch(`${estado.esp32Url}/ultimo_rfid`),
+          fetch(`${estado.esp32Url}/status`),
+          fetch(`${estado.esp32Url}/distancia`)
+        ]);
+
+        if (!ultimoRes.ok || !statusRes.ok || !distanciaRes.ok) {
+          throw new Error("Falha ao consultar endpoints da ESP32.");
+        }
+
+        const ultimo = await ultimoRes.json();
+        const status = await statusRes.json();
+        const distancia = await distanciaRes.json();
+        atualizarCardLeitura(ultimo, status, distancia);
+        definirStatusConexao("Conectado", "#2f6b4f");
+      } catch (erro) {
+        definirStatusConexao("Falha de comunicação", "#9b3f4d");
+      }
+    }
+
+    function iniciarPolling() {
+      if (intervaloPolling) clearInterval(intervaloPolling);
+      buscarLeituras();
+      intervaloPolling = setInterval(buscarLeituras, 1500);
+    }
+
+    function salvarPatrimoniosLocal() {
+      localStorage.setItem("patrimonios", JSON.stringify(estado.patrimonios));
+    }
+
+    function renderTabela() {
+      if (!estado.patrimonios.length) {
+        refs.tabelaBody.innerHTML = '<tr><td colspan="5" class="tabela-vazia">Nenhum patrimônio cadastrado.</td></tr>';
+        return;
+      }
+
+      refs.tabelaBody.innerHTML = estado.patrimonios.map((item) => {
+        const classeStatus = item.status === "dentro" ? "status-dentro" : "status-fora";
+        const fotoHtml = item.fotoDataUrl
+          ? `<img src="${item.fotoDataUrl}" alt="Foto de ${item.nome_objeto}" class="foto-mini">`
+          : "--";
+        return `
+          <tr>
+            <td>${item.codigo}</td>
+            <td>${item.nome_objeto}</td>
+            <td>${item.tag_rfid}</td>
+            <td>${fotoHtml}</td>
+            <td><span class="status ${classeStatus}">${item.status}</span></td>
+          </tr>
+        `;
+      }).join("");
+    }
+
+    function lerArquivoComoDataUrl(arquivo) {
+      return new Promise((resolve) => {
+        if (!arquivo) {
+          resolve("");
+          return;
+        }
+        const reader = new FileReader();
+        reader.onload = () => resolve(String(reader.result || ""));
+        reader.onerror = () => resolve("");
+        reader.readAsDataURL(arquivo);
+      });
+    }
+
+    async function cadastrarPatrimonio(event) {
+      event.preventDefault();
+      const formData = new FormData(refs.formPatrimonio);
+      const fotoArquivo = formData.get("foto");
+      const fotoDataUrl = await lerArquivoComoDataUrl(fotoArquivo);
+
+      const novoPatrimonio = {
+        codigo: String(formData.get("codigo") || "").trim(),
+        nome_objeto: String(formData.get("nome_objeto") || "").trim(),
+        categoria: String(formData.get("categoria") || "").trim(),
+        tag_rfid: String(formData.get("tag_rfid") || "").trim().toUpperCase(),
+        descricao: String(formData.get("descricao") || "").trim(),
+        fotoDataUrl,
+        status: "dentro",
+        criadoEm: formatarDataHoraAgora()
+      };
+
+      estado.patrimonios.unshift(novoPatrimonio);
+      salvarPatrimoniosLocal();
+      renderTabela();
+      refs.formPatrimonio.reset();
+      refs.movimentacaoMsg.textContent = "Patrimônio cadastrado localmente com sucesso.";
+    }
+
+    function confirmarMovimentacao(tipo) {
+      if (!estado.ultimaLeitura?.uid || estado.ultimaLeitura.uid === "--") {
+        refs.movimentacaoMsg.textContent = "Leia uma tag na ESP32 antes de confirmar a movimentação.";
+        return;
+      }
+      const acaoTexto = tipo === "entrando" ? "entrada" : "saída";
+      refs.movimentacaoMsg.textContent = `Movimentação de ${acaoTexto} confirmada para UID ${estado.ultimaLeitura.uid} em ${formatarDataHoraAgora()}.`;
+    }
+
+    refs.btnConectar.addEventListener("click", () => {
+      const baseUrl = normalizarBaseUrl(refs.esp32Url.value);
+      if (!baseUrl) {
+        definirStatusConexao("Informe uma URL válida", "#9b3f4d");
+        return;
+      }
+      estado.esp32Url = baseUrl;
+      localStorage.setItem("esp32Url", baseUrl);
+      definirStatusConexao("Conectando...", "#5a4ca3");
+      iniciarPolling();
+    });
+
+    refs.btnEntrando.addEventListener("click", () => confirmarMovimentacao("entrando"));
+    refs.btnSaindo.addEventListener("click", () => confirmarMovimentacao("saindo"));
+    refs.formPatrimonio.addEventListener("submit", cadastrarPatrimonio);
+
+    refs.esp32Url.value = estado.esp32Url;
+    renderTabela();
+    if (estado.esp32Url) {
+      definirStatusConexao("Conectando...", "#5a4ca3");
+      iniciarPolling();
+    }
+  </script>
 </body>
 </html>

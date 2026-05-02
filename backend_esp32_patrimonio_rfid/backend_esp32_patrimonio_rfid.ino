@@ -83,6 +83,8 @@ void handleRoot();
 void handleDistancia();
 void handleUltimoRFID();
 void handleStatus();
+void enviarCORS();
+void handleOptions();
 
 long obterTimestamp();
 
@@ -154,6 +156,10 @@ void setup() {
   server.on("/distancia", handleDistancia);
   server.on("/ultimo_rfid", handleUltimoRFID);
   server.on("/status", handleStatus);
+  server.on("/", HTTP_OPTIONS, handleOptions);
+  server.on("/distancia", HTTP_OPTIONS, handleOptions);
+  server.on("/ultimo_rfid", HTTP_OPTIONS, handleOptions);
+  server.on("/status", HTTP_OPTIONS, handleOptions);
   server.begin();
 
   Serial.println("Servidor web iniciado");
@@ -599,7 +605,19 @@ void piscarLED(int vezes, int tempo) {
 }
 
 // ================= SERVIDOR WEB =================
+void enviarCORS() {
+  server.sendHeader("Access-Control-Allow-Origin", "*");
+  server.sendHeader("Access-Control-Allow-Methods", "GET, OPTIONS");
+  server.sendHeader("Access-Control-Allow-Headers", "Content-Type");
+}
+
+void handleOptions() {
+  enviarCORS();
+  server.send(204);
+}
+
 void handleRoot() {
+  enviarCORS();
   String html = "<!DOCTYPE html><html><head><meta charset='UTF-8'><title>Monitor RFID</title>";
   html += "<style>body{font-family:Arial;text-align:center;margin-top:50px;} .card{background:#f0f0f0;border-radius:10px;padding:20px;display:inline-block;} p{margin:8px 0;}</style>";
   html += "</head><body><div class='card'>";
@@ -626,11 +644,13 @@ void handleRoot() {
 }
 
 void handleDistancia() {
+  enviarCORS();
   String json = "{\"distancia\":" + String(distancia, 1) + "}";
   server.send(200, "application/json", json);
 }
 
 void handleUltimoRFID() {
+  enviarCORS();
   String json = "{";
   json += "\"uid\":\"" + ultimoUID + "\",";
   json += "\"nome\":\"" + ultimoNome + "\",";
@@ -642,6 +662,7 @@ void handleUltimoRFID() {
 }
 
 void handleStatus() {
+  enviarCORS();
   String json = "{\"status\":\"" + String(objetoDetectado ? "detectado" : "aguardando") + "\"}";
   server.send(200, "application/json", json);
 }
