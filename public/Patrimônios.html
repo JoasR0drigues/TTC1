@@ -14,7 +14,6 @@
 
     <nav class="menu">
       <a href="Login.HTML">Início</a>
-      <a href="sobre.html">Sobre</a>
       <a href="Patrimônios.html" class="ativo">Patrimônios</a>
       <a href="historico.html">Histórico</a>
       <a href="salas-vinculadas.html">Salas Vinculadas</a>
@@ -24,32 +23,22 @@
 
   <main class="patrimonios-layout">
     <section class="card">
-      <h2>Conexão com ESP32</h2>
-      <p>Informe o endereço da sua placa para buscar as leituras em tempo real.</p>
-      <div class="campo">
-        <label for="esp32-url">URL da ESP32</label>
-        <input type="url" id="esp32-url" placeholder="Ex: http://192.168.0.120">
-      </div>
-      <div class="botoes">
-        <button type="button" class="btn btn-primario" id="btn-conectar-esp32">Conectar</button>
-      </div>
-      <p><strong>Status da conexão:</strong> <span id="status-conexao">Não conectado</span></p>
-    </section>
-
-    <section class="card">
       <h2>Leitura pendente</h2>
       <p class="tag-lida" id="uid-lida">--</p>
       <p><strong>Tipo da tag:</strong> <span id="leitura-tipo">--</span></p>
       <p><strong>Patrimônio:</strong> <span id="leitura-patrimonio">Nenhum patrimônio identificado</span></p>
       <p><strong>Código:</strong> <span id="leitura-codigo">--</span></p>
-      <p><strong>Distância:</strong> <span id="leitura-distancia">--</span></p>
       <p><strong>Horário:</strong> <span id="leitura-horario">--</span></p>
       <p><strong>Status:</strong> <span id="leitura-status">--</span></p>
     </section>
 
     <section class="card">
       <h2>Confirmar movimentação</h2>
-      <p>Quando a tag for lida, confirme se o objeto está entrando ou saindo.</p>
+      <p>Digite a tag RFID e confirme se o objeto está entrando ou saindo.</p>
+      <div class="campo">
+        <label for="tag-movimentacao">Tag RFID para movimentação</label>
+        <input type="text" id="tag-movimentacao" placeholder="Ex: A1 B2 C3 D4">
+      </div>
       <div class="acoes-movimentacao">
         <button class="btn-status btn-entrando" id="btn-entrando" type="button">Objeto entrando</button>
         <button class="btn-status btn-saindo" id="btn-saindo" type="button">Objeto saindo</button>
@@ -119,28 +108,28 @@
     </section>
   </main>
 
+  <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-database-compat.js"></script>
+  <script src="firebaseconfig.js"></script>
   <script src="auth.js"></script>
   <script>
     const sessao = AuthApp.protegerPagina({ allowedRoles: ["admin", "comum"] });
 
     const estado = {
-      esp32Url: localStorage.getItem("esp32Url") || "",
-      ultimaLeitura: null,
-      patrimonios: JSON.parse(localStorage.getItem("patrimonios") || "[]")
+      firebaseUid: "",
+      patrimonios: []
     };
 
     const refs = {
-      esp32Url: document.getElementById("esp32-url"),
-      btnConectar: document.getElementById("btn-conectar-esp32"),
-      statusConexao: document.getElementById("status-conexao"),
       uidLida: document.getElementById("uid-lida"),
       leituraTipo: document.getElementById("leitura-tipo"),
       leituraPatrimonio: document.getElementById("leitura-patrimonio"),
       leituraCodigo: document.getElementById("leitura-codigo"),
-      leituraDistancia: document.getElementById("leitura-distancia"),
       leituraHorario: document.getElementById("leitura-horario"),
       leituraStatus: document.getElementById("leitura-status"),
       tagRfidInput: document.getElementById("tag_rfid"),
+      tagMovInput: document.getElementById("tag-movimentacao"),
       btnEntrando: document.getElementById("btn-entrando"),
       btnSaindo: document.getElementById("btn-saindo"),
       movimentacaoMsg: document.getElementById("movimentacao-msg"),
@@ -148,84 +137,49 @@
       tabelaBody: document.getElementById("tabela-patrimonios-body")
     };
 
-    let intervaloPolling = null;
+    firebase.initializeApp(window.firebaseConfig);
+    const db = firebase.database();
+    const auth = firebase.auth();
 
-    function normalizarBaseUrl(url) {
-      return (url || "").trim().replace(/\/+$/, "");
+    function normalizarTag(tag) {
+      return String(tag || "").trim().replace(/\s+/g, "").toUpperCase();
     }
 
-    function definirStatusConexao(texto, cor) {
-      refs.statusConexao.textContent = texto;
-      refs.statusConexao.style.color = cor;
-      refs.statusConexao.style.fontWeight = "700";
+    function formatarTag(tag) {
+      const limpa = normalizarTag(tag);
+      return limpa.replace(/(.{2})(?=.)/g, "$1 ").trim() || "--";
     }
 
     function formatarDataHoraAgora() {
       return new Date().toLocaleString("pt-BR");
     }
 
-    function atualizarCardLeitura(ultimo, status, distancia) {
-      const uid = (ultimo && ultimo.uid) || "--";
-      const tipo = (ultimo && ultimo.tipo_tag) || "--";
-      const patrimonioNome = (ultimo && ultimo.patrimonio_nome) || "Nenhum patrimônio identificado";
-      const patrimonioCodigo = (ultimo && ultimo.patrimonio_codigo) || "--";
-      const statusTexto = (status && status.status) || "--";
-      const distanciaTexto = typeof distancia?.distancia === "number"
-        ? `${distancia.distancia.toFixed(1)} cm`
-        : "--";
-
-      refs.uidLida.textContent = uid || "--";
-      refs.leituraTipo.textContent = tipo;
-      refs.leituraPatrimonio.textContent = patrimonioNome;
-      refs.leituraCodigo.textContent = patrimonioCodigo;
-      refs.leituraDistancia.textContent = distanciaTexto;
-      refs.leituraStatus.textContent = statusTexto;
+    function atualizarCardLeitura(leitura) {
+      refs.uidLida.textContent = formatarTag(leitura?.uid);
+      refs.leituraTipo.textContent = leitura?.tipo || "--";
+      refs.leituraPatrimonio.textContent = leitura?.patrimonioNome || "Nenhum patrimônio identificado";
+      refs.leituraCodigo.textContent = leitura?.patrimonioCodigo || "--";
+      refs.leituraStatus.textContent = leitura?.status || "--";
       refs.leituraHorario.textContent = formatarDataHoraAgora();
+    }
 
-      if (uid && uid !== "--") {
-        refs.tagRfidInput.value = uid;
+    async function garantirUsuarioFirebase() {
+      if (!auth.currentUser) {
+        await auth.signInAnonymously();
       }
-
-      estado.ultimaLeitura = {
-        uid,
-        tipo,
-        patrimonioNome,
-        patrimonioCodigo,
-        status: statusTexto
-      };
+      estado.firebaseUid = auth.currentUser.uid;
+      return estado.firebaseUid;
     }
 
-    async function buscarLeituras() {
-      if (!estado.esp32Url) return;
-      try {
-        const [ultimoRes, statusRes, distanciaRes] = await Promise.all([
-          fetch(`${estado.esp32Url}/ultimo_rfid`),
-          fetch(`${estado.esp32Url}/status`),
-          fetch(`${estado.esp32Url}/distancia`)
-        ]);
-
-        if (!ultimoRes.ok || !statusRes.ok || !distanciaRes.ok) {
-          throw new Error("Falha ao consultar endpoints da ESP32.");
-        }
-
-        const ultimo = await ultimoRes.json();
-        const status = await statusRes.json();
-        const distancia = await distanciaRes.json();
-        atualizarCardLeitura(ultimo, status, distancia);
-        definirStatusConexao("Conectado", "#2f6b4f");
-      } catch (erro) {
-        definirStatusConexao("Falha de comunicação", "#9b3f4d");
-      }
-    }
-
-    function iniciarPolling() {
-      if (intervaloPolling) clearInterval(intervaloPolling);
-      buscarLeituras();
-      intervaloPolling = setInterval(buscarLeituras, 1500);
-    }
-
-    function salvarPatrimoniosLocal() {
-      localStorage.setItem("patrimonios", JSON.stringify(estado.patrimonios));
+    async function registrarPerfilSistema() {
+      const uid = await garantirUsuarioFirebase();
+      const emailSessao = sessao?.email || "usuario_local";
+      await db.ref(`usuarios_sistema/${uid}`).update({
+        email: emailSessao,
+        nome: emailSessao.split("@")[0] || "usuario",
+        role: sessao?.role || "comum",
+        atualizado_em: Date.now()
+      });
     }
 
     function renderTabela() {
@@ -235,25 +189,41 @@
       }
 
       refs.tabelaBody.innerHTML = estado.patrimonios.map((item) => {
-        const classeStatus = item.status === "dentro" ? "status-dentro" : "status-fora";
-        const fotoHtml = item.fotoDataUrl
-          ? `<img src="${item.fotoDataUrl}" alt="Foto de ${item.nome_objeto}" class="foto-mini">`
+        const classeStatus = item.status_atual === "fora" ? "status-fora" : "status-dentro";
+        const fotoHtml = item.foto_data_url
+          ? `<img src="${item.foto_data_url}" alt="Foto de ${item.nome}" class="foto-mini">`
           : "--";
         return `
           <tr>
-            <td>${item.codigo}</td>
-            <td>${item.nome_objeto}</td>
-            <td>${item.tag_rfid}</td>
+            <td>${item.codigo || "--"}</td>
+            <td>${item.nome || "--"}</td>
+            <td>${formatarTag(item.uid_tag || "")}</td>
             <td>${fotoHtml}</td>
-            <td><span class="status ${classeStatus}">${item.status}</span></td>
+            <td><span class="status ${classeStatus}">${item.status_atual || "dentro"}</span></td>
           </tr>
         `;
       }).join("");
     }
 
+    function observarPatrimonios() {
+      db.ref("patrimonios")
+        .orderByChild("usuario_uid")
+        .equalTo(estado.firebaseUid)
+        .on("value", (snapshot) => {
+          const valores = snapshot.val() || {};
+          estado.patrimonios = Object.values(valores).sort((a, b) => (b.criado_em || 0) - (a.criado_em || 0));
+          renderTabela();
+        });
+    }
+
+    function buscarPatrimonioPorTag(uidTag) {
+      const uidNormalizada = normalizarTag(uidTag);
+      return estado.patrimonios.find((item) => normalizarTag(item.uid_tag) === uidNormalizada) || null;
+    }
+
     function lerArquivoComoDataUrl(arquivo) {
       return new Promise((resolve) => {
-        if (!arquivo) {
+        if (!arquivo || !arquivo.name) {
           resolve("");
           return;
         }
@@ -266,62 +236,127 @@
 
     async function cadastrarPatrimonio(event) {
       event.preventDefault();
-      const formData = new FormData(refs.formPatrimonio);
-      const fotoArquivo = formData.get("foto");
-      const fotoDataUrl = await lerArquivoComoDataUrl(fotoArquivo);
+      try {
+        const uidUsuario = await garantirUsuarioFirebase();
+        const formData = new FormData(refs.formPatrimonio);
+        const fotoDataUrl = await lerArquivoComoDataUrl(formData.get("foto"));
+        const uidTag = normalizarTag(formData.get("tag_rfid"));
 
-      const novoPatrimonio = {
-        codigo: String(formData.get("codigo") || "").trim(),
-        nome_objeto: String(formData.get("nome_objeto") || "").trim(),
-        categoria: String(formData.get("categoria") || "").trim(),
-        tag_rfid: String(formData.get("tag_rfid") || "").trim().toUpperCase(),
-        descricao: String(formData.get("descricao") || "").trim(),
-        fotoDataUrl,
-        status: "dentro",
-        criadoEm: formatarDataHoraAgora()
-      };
+        if (!uidTag) {
+          refs.movimentacaoMsg.textContent = "Informe a tag RFID do patrimônio.";
+          return;
+        }
 
-      estado.patrimonios.unshift(novoPatrimonio);
-      salvarPatrimoniosLocal();
-      renderTabela();
-      refs.formPatrimonio.reset();
-      refs.movimentacaoMsg.textContent = "Patrimônio cadastrado localmente com sucesso.";
+        const patrimonioRef = db.ref("patrimonios").push();
+        const patrimonioId = patrimonioRef.key;
+        const novoPatrimonio = {
+          id: patrimonioId,
+          codigo: String(formData.get("codigo") || "").trim(),
+          nome: String(formData.get("nome_objeto") || "").trim(),
+          categoria: String(formData.get("categoria") || "").trim(),
+          uid_tag: uidTag,
+          usuario_uid: uidUsuario,
+          localizacao_padrao: "--",
+          localizacao_atual: "--",
+          status_atual: "dentro",
+          descricao: String(formData.get("descricao") || "").trim(),
+          foto_data_url: fotoDataUrl,
+          criado_em: Date.now()
+        };
+
+        const updates = {};
+        updates[`patrimonios/${patrimonioId}`] = novoPatrimonio;
+        updates[`tags_patrimonio/${uidTag}`] = {
+          patrimonio_id: patrimonioId,
+          patrimonio_nome: novoPatrimonio.nome,
+          patrimonio_codigo: novoPatrimonio.codigo,
+          vinculado_ao_usuario: uidUsuario
+        };
+        updates[`usuarios/${uidTag}`] = {
+          nome: sessao?.email || "usuario",
+          vinculado_ao_usuario: uidUsuario
+        };
+
+        await db.ref().update(updates);
+        refs.formPatrimonio.reset();
+        refs.tagMovInput.value = formatarTag(uidTag);
+        atualizarCardLeitura({
+          uid: uidTag,
+          tipo: "patrimonio",
+          patrimonioNome: novoPatrimonio.nome,
+          patrimonioCodigo: novoPatrimonio.codigo,
+          status: "cadastrado"
+        });
+        refs.movimentacaoMsg.textContent = "Patrimônio salvo no Firebase com sucesso.";
+      } catch (erro) {
+        refs.movimentacaoMsg.textContent = "Erro ao salvar patrimônio no Firebase.";
+      }
     }
 
-    function confirmarMovimentacao(tipo) {
-      if (!estado.ultimaLeitura?.uid || estado.ultimaLeitura.uid === "--") {
-        refs.movimentacaoMsg.textContent = "Leia uma tag na ESP32 antes de confirmar a movimentação.";
-        return;
+    async function confirmarMovimentacao(tipo) {
+      try {
+        const uidUsuario = await garantirUsuarioFirebase();
+        const uidTag = normalizarTag(refs.tagMovInput.value || refs.tagRfidInput?.value);
+        if (!uidTag) {
+          refs.movimentacaoMsg.textContent = "Digite a tag RFID para confirmar a movimentação.";
+          return;
+        }
+
+        const patrimonio = buscarPatrimonioPorTag(uidTag);
+        if (!patrimonio) {
+          refs.movimentacaoMsg.textContent = "Tag não encontrada entre os patrimônios cadastrados.";
+          return;
+        }
+
+        await db.ref("movimentacoes").push({
+          patrimonio_id: patrimonio.id,
+          patrimonio_nome: patrimonio.nome,
+          patrimonio_codigo: patrimonio.codigo,
+          uid_tag: uidTag,
+          usuario_uid: uidUsuario,
+          tipo,
+          timestamp: Date.now(),
+          confirmado_por: sessao?.email || "usuario"
+        });
+
+        await db.ref(`patrimonios/${patrimonio.id}`).update({
+          status_atual: tipo === "entrada" ? "dentro" : "fora",
+          atualizado_em: Date.now()
+        });
+
+        atualizarCardLeitura({
+          uid: uidTag,
+          tipo: "movimentacao",
+          patrimonioNome: patrimonio.nome,
+          patrimonioCodigo: patrimonio.codigo,
+          status: tipo === "entrada" ? "entrada confirmada" : "saida confirmada"
+        });
+        refs.movimentacaoMsg.textContent = `Movimentação de ${tipo} salva no Firebase.`;
+      } catch (erro) {
+        refs.movimentacaoMsg.textContent = "Erro ao salvar movimentação no Firebase.";
       }
-      const acaoTexto = tipo === "entrando" ? "entrada" : "saída";
-      refs.movimentacaoMsg.textContent = `Movimentação de ${acaoTexto} confirmada para UID ${estado.ultimaLeitura.uid} em ${formatarDataHoraAgora()}.`;
     }
 
-    refs.btnConectar.addEventListener("click", () => {
-      const baseUrl = normalizarBaseUrl(refs.esp32Url.value);
-      if (!baseUrl) {
-        definirStatusConexao("Informe uma URL válida", "#9b3f4d");
-        return;
+    async function iniciar() {
+      try {
+        await garantirUsuarioFirebase();
+        await registrarPerfilSistema();
+        observarPatrimonios();
+        refs.movimentacaoMsg.textContent = "Firebase conectado.";
+      } catch (erro) {
+        refs.movimentacaoMsg.textContent = "Falha ao conectar com Firebase. Verifique as regras.";
       }
-      estado.esp32Url = baseUrl;
-      localStorage.setItem("esp32Url", baseUrl);
-      definirStatusConexao("Conectando...", "#5a4ca3");
-      iniciarPolling();
-    });
+    }
 
-    refs.btnEntrando.addEventListener("click", () => confirmarMovimentacao("entrando"));
-    refs.btnSaindo.addEventListener("click", () => confirmarMovimentacao("saindo"));
+    refs.btnEntrando.addEventListener("click", () => confirmarMovimentacao("entrada"));
+    refs.btnSaindo.addEventListener("click", () => confirmarMovimentacao("saida"));
 
     if (sessao && sessao.role === "admin") {
       refs.formPatrimonio.addEventListener("submit", cadastrarPatrimonio);
     }
 
-    refs.esp32Url.value = estado.esp32Url;
     renderTabela();
-    if (estado.esp32Url) {
-      definirStatusConexao("Conectando...", "#5a4ca3");
-      iniciarPolling();
-    }
+    iniciar();
   </script>
 </body>
 </html>

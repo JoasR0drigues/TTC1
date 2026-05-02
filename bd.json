@@ -1,76 +1,13 @@
 {
-  "usuarios_sistema": {
-    "UID_DO_USUARIO_FIREBASE": {
-      "nome": "Joas",
-      "email": "joas@email.com",
-      "uid_cartao": "F72967C9",
-      "criado_em": "2026-04-21T20:00:00.000Z"
-    }
-  },
-  "usuarios": {
-    "F72967C9": {
-      "nome": "Joas",
-      "vinculado_ao_usuario": "UID_DO_USUARIO_FIREBASE"
-    }
-  },
-  "patrimonios": {
-    "-OUx123abc": {
-      "id": "-OUx123abc",
-      "codigo": "COD-001",
-      "nome": "Cadeira",
-      "categoria": "Mobiliário",
-      "uid_tag": "A1B2C3D4",
-      "usuario_uid": "UID_DO_USUARIO_FIREBASE",
-      "localizacao_padrao": "Sala de estar",
-      "localizacao_atual": "Sala de estar",
-      "status_atual": "cadastrado",
-      "descricao": "Cadeira de madeira"
-    }
-  },
-  "tags_patrimonio": {
-    "A1B2C3D4": {
-      "patrimonio_id": "-OUx123abc",
-      "patrimonio_nome": "Cadeira",
-      "patrimonio_codigo": "COD-001"
-    }
-  },
-  "leituras_recentes": {
-    "UID_DO_USUARIO_FIREBASE": {}
-  },
-  "movimentacoes": {
-    "-OUxmov001": {
-      "patrimonio_id": "-OUx123abc",
-      "usuario_uid": "UID_DO_USUARIO_FIREBASE",
-      "tipo": "entrada",
-      "timestamp": 1775042400000
-    }
-  },
-  "salas": {
-    "UID_DO_USUARIO_FIREBASE": {
-      "sala01": {
-        "nome_local": "Bloco Administrativo",
-        "nome_sala": "Sala 01"
-      }
-    }
-  },
-  "salas_patrimonios": {
-    "UID_DO_USUARIO_FIREBASE": {
-      "sala01": {
-        "-OUx123abc": true
-      }
-    }
-  },
-  "monitoramento_ultrassonico": {
-    "UID_DO_USUARIO_FIREBASE": {
-      "configuracoes": {}
-    }
-  },
-  "acessos": {
-    "UID_DO_USUARIO_FIREBASE": {}
-  },
-  "teste_conexao": {
-    "UID_DO_USUARIO_FIREBASE": {
-      "ok": true
-    }
-  }
+  "usuarios_sistema": {},
+  "usuarios": {},
+  "patrimonios": {},
+  "tags_patrimonio": {},
+  "leituras_recentes": {},
+  "movimentacoes": {},
+  "salas": {},
+  "salas_patrimonios": {},
+  "monitoramento_ultrassonico": {},
+  "acessos": {},
+  "teste_conexao": {}
 }
