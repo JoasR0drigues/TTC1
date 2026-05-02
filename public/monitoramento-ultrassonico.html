@@ -20,12 +20,138 @@
     </nav>
   </header>
 
-  <main>
+  <main class="movimentacao-layout">
+
     <section class="card">
-      <h2>Monitoramento ultrassônico</h2>
-      <p>Esta tela foi preparada para receber os dados dos sensores.</p>
-      <p>Nenhuma leitura disponível no momento.</p>
+      <h2>Cadastro de monitoramento por sala</h2>
+      <p class="sala-subtitulo">
+        Selecione a sala vinculada. O sistema utilizará automaticamente o limite em centímetros
+        cadastrado para a sala e emitirá alerta caso algum patrimônio vinculado ultrapasse esse limite.
+      </p>
+
+      <form class="form-sala">
+        <div class="campo">
+          <label for="sala-monitorada">Sala vinculada</label>
+          <select id="sala-monitorada" name="sala-monitorada">
+            <option value="">Selecione uma sala vinculada</option>
+            <option value="sala01">Bloco Administrativo - Sala 01</option>
+            <option value="sala02">Bloco Administrativo - Sala 02</option>
+            <option value="recepcao">Recepção - Sala Principal</option>
+          </select>
+        </div>
+
+        <div class="campo">
+          <label for="limite-sala-monitorada">Limite da sala (cm)</label>
+          <input
+            type="number"
+            id="limite-sala-monitorada"
+            name="limite-sala-monitorada"
+            placeholder="Ex: 300"
+            readonly
+          >
+        </div>
+
+        <div class="botoes">
+          <button type="submit" class="btn btn-primario">Ativar monitoramento da sala</button>
+        </div>
+      </form>
     </section>
+
+    <section class="card">
+      <h2>Leitura atual monitorada</h2>
+
+      <div class="leitura-atual">
+        <p><strong>Sala monitorada:</strong> --</p>
+        <p><strong>Patrimônio detectado:</strong> --</p>
+        <p><strong>UID:</strong> --</p>
+        <p><strong>Distância atual:</strong> --</p>
+        <p><strong>Limite da sala:</strong> --</p>
+        <p><strong>Status:</strong> --</p>
+        <p><strong>Atualização:</strong> --</p>
+        <p><strong>Último alerta:</strong> --</p>
+      </div>
+    </section>
+
+    <section class="card" style="grid-column: 1 / -1;">
+      <h2>Patrimônios monitorados em tempo real</h2>
+
+      <div class="tabela-wrapper">
+        <table>
+          <thead>
+            <tr>
+              <th>Sala vinculada</th>
+              <th>Patrimônio</th>
+              <th>Código</th>
+              <th>UID</th>
+              <th>Limite da sala</th>
+              <th>Distância atual</th>
+              <th>Status</th>
+              <th>Última leitura</th>
+              <th>Atualizado em</th>
+              <th>Ações</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>Bloco Administrativo - Sala 01</td>
+              <td>Cadeira</td>
+              <td>COD-001</td>
+              <td>04 A7 B2 19</td>
+              <td>300 cm</td>
+              <td>250 cm</td>
+              <td><span class="status status-dentro">Dentro da sala</span></td>
+              <td>250 cm</td>
+              <td>02/05/2026 19:40</td>
+              <td>
+                <div class="acoes-tabela">
+                  <button type="button" class="btn btn-editar">Detalhes</button>
+                </div>
+              </td>
+            </tr>
+
+            <tr>
+              <td>Bloco Administrativo - Sala 01</td>
+              <td>Notebook</td>
+              <td>COD-003</td>
+              <td>19 C3 8F 44</td>
+              <td>300 cm</td>
+              <td>355 cm</td>
+              <td><span class="status status-fora">Fora do limite</span></td>
+              <td>355 cm</td>
+              <td>02/05/2026 19:41</td>
+              <td>
+                <div class="acoes-tabela">
+                  <button type="button" class="btn btn-excluir">Gerar alerta</button>
+                </div>
+              </td>
+            </tr>
+
+            <tr>
+              <td colspan="10" class="tabela-vazia">
+                Nenhum patrimônio monitorado no momento.
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
   </main>
+
+  <script>
+    const salaMonitorada = document.getElementById("sala-monitorada");
+    const limiteSalaMonitorada = document.getElementById("limite-sala-monitorada");
+
+    const limitesSalas = {
+      sala01: 300,
+      sala02: 450,
+      recepcao: 200
+    };
+
+    salaMonitorada.addEventListener("change", function () {
+      const salaSelecionada = this.value;
+      limiteSalaMonitorada.value = limitesSalas[salaSelecionada] || "";
+    });
+  </script>
 </body>
 </html>

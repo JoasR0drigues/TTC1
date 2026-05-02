@@ -31,17 +31,29 @@
 
       <form class="form-sala">
         <div class="campo">
-        <label for="nome-local">Nome do local</label>
-        <input type="text" id="nome-local" name="nome-local" placeholder="Ex: Bloco Administrativo">
+          <label for="nome-local">Nome do local</label>
+          <input type="text" id="nome-local" name="nome-local" placeholder="Ex: Bloco Administrativo">
         </div>
 
         <div class="campo">
-        <label for="sala-especifica">Sala específica</label>
-        <input type="text" id="sala-especifica" name="sala-especifica" placeholder="Ex: Sala 01">
+          <label for="sala-especifica">Sala específica</label>
+          <input type="text" id="sala-especifica" name="sala-especifica" placeholder="Ex: Sala 01">
+        </div>
+
+        <div class="campo">
+          <label for="limite-sala">Limite da sala (em cm)</label>
+          <input
+            type="number"
+            id="limite-sala"
+            name="limite-sala"
+            placeholder="Ex: 300"
+            min="1"
+          >
+          <small>Informe a distância máxima para considerar que o patrimônio está dentro da sala.</small>
         </div>
 
         <div class="botoes">
-        <button type="submit" class="btn btn-primario">Criar sala</button>
+          <button type="submit" class="btn btn-primario">Criar sala</button>
         </div>
       </form>
     </section>
@@ -54,27 +66,27 @@
 
       <form class="form-sala">
         <div class="campo">
-        <label for="sala-cadastrada">Sala cadastrada</label>
-        <select id="sala-cadastrada" name="sala-cadastrada">
-        <option>Selecione uma sala</option>
-        <option>Bloco Administrativo - Sala 01</option>
-        <option>Bloco Administrativo - Sala 02</option>
-        <option>Recepção - Sala Principal</option>
-        </select>
+          <label for="sala-cadastrada">Sala cadastrada</label>
+          <select id="sala-cadastrada" name="sala-cadastrada">
+            <option>Selecione uma sala</option>
+            <option>Bloco Administrativo - Sala 01</option>
+            <option>Bloco Administrativo - Sala 02</option>
+            <option>Recepção - Sala Principal</option>
+          </select>
         </div>
 
         <div class="campo">
-        <label for="patrimonio-vinculo">Patrimônio</label>
-        <select id="patrimonio-vinculo" name="patrimonio-vinculo">
-        <option>Selecione um patrimônio</option>
-        <option>CADEIRA - COD-001</option>
-        <option>MESA - COD-002</option>
-        <option>NOTEBOOK - COD-003</option>
-        </select>
+          <label for="patrimonio-vinculo">Patrimônio</label>
+          <select id="patrimonio-vinculo" name="patrimonio-vinculo">
+            <option>Selecione um patrimônio</option>
+            <option>CADEIRA - COD-001</option>
+            <option>MESA - COD-002</option>
+            <option>NOTEBOOK - COD-003</option>
+          </select>
         </div>
 
         <div class="botoes">
-        <button type="submit" class="btn btn-vincular">Vincular patrimônio</button>
+          <button type="submit" class="btn btn-vincular">Vincular patrimônio</button>
         </div>
       </form>
     </section>
@@ -102,23 +114,23 @@
         <button type="button" class="btn btn-excluir-sala">Excluir sala selecionada</button>
       </div>
 
-    <div class="tabela-wrapper tabela-sala-wrapper">
-    <table class="tabela-sala">
-    <thead>
-    <tr>
-    <th>Código</th>
-    <th>Patrimônio</th>
-    <th>Status</th>
-    <th>Localização</th>
-    </tr>
-    </thead>
-    <tbody>
-    <tr>
-    <td colspan="4" class="tabela-vazia">Nenhum patrimônio vinculado.</td>
-    </tr>
-    </tbody>
-    </table>
-    </div>
+      <div class="tabela-wrapper tabela-sala-wrapper">
+        <table class="tabela-sala">
+          <thead>
+            <tr>
+              <th>Código</th>
+              <th>Patrimônio</th>
+              <th>Status</th>
+              <th>Localização</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td colspan="4" class="tabela-vazia">Nenhum patrimônio vinculado.</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
     </section>
 
   </main>
