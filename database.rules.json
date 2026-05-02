@@ -1,0 +1,98 @@
+{
+  "rules": {
+    ".read": false,
+    ".write": false,
+
+    "usuarios_sistema": {
+      "$uid": {
+        ".read": "auth != null && auth.uid === $uid",
+        ".write": "auth != null && auth.uid === $uid"
+      }
+    },
+
+    "usuarios": {
+      "$uidTag": {
+        ".read": "auth != null && data.child('vinculado_ao_usuario').val() === auth.uid",
+        ".write": "auth != null && ((!data.exists() && newData.child('vinculado_ao_usuario').val() === auth.uid) || (data.exists() && data.child('vinculado_ao_usuario').val() === auth.uid))"
+      }
+    },
+
+    "patrimonios": {
+      "$patrimonioId": {
+        ".read": "auth != null && data.exists() && root.child('usuarios/' + data.child('uid_tag').val() + '/vinculado_ao_usuario').val() === auth.uid",
+        ".write": "auth != null && (((!data.exists()) && root.child('usuarios/' + newData.child('uid_tag').val() + '/vinculado_ao_usuario').val() === auth.uid) || (data.exists() && root.child('usuarios/' + data.child('uid_tag').val() + '/vinculado_ao_usuario').val() === auth.uid))"
+      }
+    },
+
+    "tags_patrimonio": {
+      "$uidTag": {
+        ".read": "auth != null && root.child('usuarios/' + $uidTag + '/vinculado_ao_usuario').val() === auth.uid",
+        ".write": "auth != null && root.child('usuarios/' + $uidTag + '/vinculado_ao_usuario').val() === auth.uid"
+      }
+    },
+
+    "movimentacoes": {
+      "$movId": {
+        ".read": "auth != null && data.child('usuario_uid').val() === auth.uid",
+        ".write": "auth != null && ((!data.exists() && newData.child('usuario_uid').val() === auth.uid) || (data.exists() && data.child('usuario_uid').val() === auth.uid))"
+      }
+    },
+
+    "salas": {
+      "$uid": {
+        ".read": "auth != null && auth.uid === $uid",
+        ".write": "auth != null && auth.uid === $uid"
+      }
+    },
+
+    "salas_patrimonios": {
+      "$uid": {
+        "$salaId": {
+          "$patrimonioId": {
+            ".read": "auth != null && auth.uid === $uid",
+            ".write": "auth != null && auth.uid === $uid"
+          }
+        }
+      }
+    },
+
+    "monitoramento_ultrassonico": {
+      "$uid": {
+        ".read": "auth != null && auth.uid === $uid",
+        ".write": "auth != null && auth.uid === $uid",
+        "configuracoes": {
+          "$patrimonioId": {
+            ".read": "auth != null && auth.uid === $uid",
+            ".write": "auth != null && auth.uid === $uid"
+          }
+        }
+      }
+    },
+
+    "leituras_recentes": {
+      ".indexOn": ["timestamp"],
+      "$uid": {
+        ".read": "auth != null && auth.uid === $uid",
+        "$leituraId": {
+          ".write": "auth != null && auth.uid === $uid"
+        }
+      }
+    },
+
+    "acessos": {
+      "$uid": {
+        ".read": "auth != null && auth.uid === $uid",
+        "$acessoId": {
+          ".write": "auth != null && auth.uid === $uid"
+        }
+      }
+    },
+
+    "teste_conexao": {
+      "$uid": {
+        ".read": "auth != null && auth.uid === $uid",
+        ".write": "auth != null && auth.uid === $uid"
+      }
+    }
+  }
+}

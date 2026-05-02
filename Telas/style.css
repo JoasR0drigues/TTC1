@@ -1,836 +1,216 @@
-/* -------------------------
-   1. RESET
-------------------------- */
 * {
-  margin: 0;
-  padding: 0;
   box-sizing: border-box;
 }
 
-/* -------------------------
-   2. CORES
-------------------------- */
-:root {
-  --azul-escuro: #0b1f4d;
-  --azul-principal: #1357c5;
-  --azul-medio: #1f6feb;
-  --azul-claro: #dfeeff;
-  --ciano: #1ec8d9;
-  --branco: #ffffff;
-  --texto-escuro: #10203a;
-  --texto-medio: #51627c;
-  --borda: #d3e2f7;
-  --fundo: linear-gradient(180deg, #f5f9ff 0%, #eaf2fb 100%);
-  --sombra: 0 12px 28px rgba(10, 31, 77, 0.10);
-}
-
-/* -------------------------
-   3. BODY
-------------------------- */
 body {
-  font-family: Arial, Helvetica, sans-serif;
-  background: var(--fundo);
-  color: var(--texto-escuro);
-  min-height: 100vh;
-  padding: 0 30px 30px;
+  margin: 0;
+  font-family: Arial, sans-serif;
+  background: #f5f7fb;
+  color: #1f2937;
 }
 
-/* -------------------------
-   4. TOPO
-------------------------- */
 .topo {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 28px 0;
-  border-bottom: 1px solid var(--borda);
-  margin-bottom: 30px;
+  gap: 12px;
+  padding: 16px 20px;
+  background: #ffffff;
+  border-bottom: 1px solid #dbe2ea;
 }
 
 .logo-texto {
-  font-size: 1.8rem;
-  font-weight: 800;
-  color: var(--azul-escuro);
+  font-weight: 700;
 }
 
 .logo-destaque {
-  color: var(--azul-medio);
+  color: #2563eb;
 }
 
-/* -------------------------
-   5. MENU
-------------------------- */
 .menu {
   display: flex;
-  gap: 24px;
   flex-wrap: wrap;
+  gap: 10px;
 }
 
 .menu a {
   text-decoration: none;
-  color: var(--azul-escuro);
-  font-weight: 700;
-  position: relative;
-  transition: 0.3s;
+  color: #1f2937;
+  padding: 6px 10px;
+  border-radius: 6px;
 }
 
-.menu a:hover,
 .menu a.ativo {
-  color: var(--azul-medio);
+  background: #2563eb;
+  color: #ffffff;
 }
 
-.menu a::after {
-  content: "";
-  position: absolute;
-  left: 0;
-  bottom: -6px;
-  width: 0;
-  height: 2px;
-  background: var(--azul-medio);
-  transition: 0.3s;
-}
-
-.menu a:hover::after,
-.menu a.ativo::after {
-  width: 100%;
-}
-
-/* -------------------------
-   6. ÁREA PRINCIPAL
-------------------------- */
-.hero {
+main,
+.hero,
+.conteudo-login,
+.patrimonios-layout,
+.movimentacao-layout,
+.salas-layout {
+  padding: 20px;
   display: grid;
-  grid-template-columns: 1.2fr 1fr;
-  gap: 40px;
-  align-items: center;
-  min-height: 70vh;
+  gap: 16px;
 }
 
-.hero-texto h1 {
-  font-size: 3.8rem;
-  line-height: 1.1;
-  margin-bottom: 20px;
-  color: var(--azul-escuro);
+.hero,
+.conteudo-login,
+.patrimonios-layout,
+.movimentacao-layout,
+.salas-layout {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
 }
 
-.hero-texto h1 span {
-  color: var(--azul-medio);
-}
-
-.subtitulo {
-  color: var(--azul-medio);
-  font-size: 0.95rem;
-  font-weight: 700;
-  letter-spacing: 1px;
-  text-transform: uppercase;
-  margin-bottom: 14px;
-}
-
-.descricao {
-  font-size: 1.1rem;
-  line-height: 1.8;
-  color: var(--texto-medio);
-  margin-bottom: 28px;
-}
-
-/* -------------------------
-   7. BOTÕES
-------------------------- */
-.botoes {
-  display: flex;
-  gap: 14px;
-  flex-wrap: wrap;
-}
-
-.btn {
-  text-decoration: none;
-  padding: 14px 22px;
-  border-radius: 12px;
-  font-weight: 700;
-  transition: 0.3s;
-  display: inline-block;
-}
-
-.btn-primario {
-  background: var(--azul-medio);
-  color: var(--branco);
-}
-
-.btn-primario:hover {
-  background: var(--azul-principal);
-  transform: translateY(-2px);
-}
-
-.btn-secundario {
-  border: 2px solid var(--azul-medio);
-  color: var(--azul-medio);
-  background: transparent;
-}
-
-.btn-secundario:hover {
-  background: var(--azul-medio);
-  color: var(--branco);
-}
-
-/* -------------------------
-   8. CARD DA LOGO
-------------------------- */
-.hero-imagem {
-  display: flex;
-  justify-content: center;
-  align-items: center;
-}
-
-.card-logo {
-  width: 100%;
-  max-width: 460px;
-  background: var(--branco);
-  border: 1px solid var(--borda);
-  border-radius: 24px;
-  padding: 30px;
-  box-shadow: var(--sombra);
-}
-
-.card-logo img {
-  width: 100%;
-  display: block;
-}
-
-/* -------------------------
-   9. SEÇÕES / CAIXAS
-------------------------- */
-.secao,
-.card {
-  background: var(--branco);
-  border: 1px solid var(--borda);
-  border-radius: 22px;
-  padding: 30px;
-  box-shadow: var(--sombra);
-}
-
+.card,
 .secao {
-  margin-top: 24px;
+  background: #ffffff;
+  border: 1px solid #dbe2ea;
+  border-radius: 10px;
+  padding: 16px;
 }
 
-.secao h2,
-.card h2 {
-  color: var(--azul-escuro);
-  margin-bottom: 16px;
-  font-size: 2rem;
+h1,
+h2 {
+  margin-top: 0;
 }
 
-.secao p,
-.card p {
-  color: var(--texto-medio);
-  line-height: 1.8;
+.campo {
+  margin-bottom: 12px;
 }
 
-/* -------------------------
-   10. LOGIN
-------------------------- */
-.conteudo-login {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 28px;
-}
-
-.campo {/* =========================
-   PÁGINA DE PATRIMÔNIOS
-========================= */
-.patrimonios-layout {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 24px;
-  align-items: start;
-}
-
-.patrimonio-form-card,
-.patrimonio-tabela-card {
-  min-height: 100%;
-}
-
-.patrimonio-form-card h2,
-.patrimonio-tabela-card h2 {
-  font-size: 2rem;
-  margin-bottom: 24px;
-  color: var(--azul-escuro);
-}
-
-/* FORMULÁRIO */
-.form-patrimonio .campo {
-  margin-bottom: 20px;
-}
-
-.form-patrimonio label {
+label {
   display: block;
-  margin-bottom: 10px;
-  font-size: 1rem;
-  font-weight: 700;
-  color: var(--azul-escuro);
+  margin-bottom: 6px;
+  font-weight: 600;
 }
 
-.form-patrimonio input[type="text"],
-.form-patrimonio textarea,
-.form-patrimonio input[type="file"] {
+input,
+select,
+textarea,
+button {
   width: 100%;
-  padding: 16px 18px;
-  border: 1px solid var(--borda);
-  border-radius: 18px;
-  font-size: 1rem;
-  background: #f9fbff;
-  color: var(--texto-escuro);
-  outline: none;
+  padding: 10px;
+  border: 1px solid #cbd5e1;
+  border-radius: 8px;
+  font: inherit;
 }
 
-.form-patrimonio input[type="text"]:focus,
-.form-patrimonio textarea:focus,
-.form-patrimonio input[type="file"]:focus {
-  border-color: var(--azul-medio);
-  box-shadow: 0 0 0 4px rgba(31, 111, 235, 0.10);
-}
-
-.form-patrimonio textarea {
-  min-height: 130px;
+textarea {
+  min-height: 90px;
   resize: vertical;
 }
 
-.texto-ajuda {
-  display: block;
-  margin-top: 10px;
-  color: var(--texto-medio);
-  font-size: 0.95rem;
-}
-
-/* TABELA */
-.tabela-wrapper {
-  overflow-x: auto;
-  border-radius: 18px;
-  border: 1px solid var(--borda);
-  background: var(--branco);
-}
-
-.tabela-patrimonios {
-  width: 100%;
-  border-collapse: collapse;
-  min-width: 700px;
-}
-
-.tabela-patrimonios thead {
-  background: #eef5ff;
-}
-
-.tabela-patrimonios th,
-.tabela-patrimonios td {
-  padding: 18px 20px;
-  text-align: left;
-  border-bottom: 1px solid #e2ebf8;
-  font-size: 1rem;
-}
-
-.tabela-patrimonios th {
-  color: var(--azul-escuro);
-  font-size: 1.05rem;
-}
-
-.tabela-patrimonios td {
-  color: var(--texto-escuro);
-}
-
-.foto-mini {
-  width: 84px;
-  height: 84px;
-  object-fit: cover;
-  border-radius: 14px;
-  border: 1px solid var(--borda);
-  background: #fff;
-}
-
-/* STATUS */
-.status {
-  display: inline-block;
-  padding: 10px 18px;
-  border-radius: 999px;
-  font-weight: 700;
-  font-size: 0.95rem;
-}
-
-.status-vazio {
-  background: #dff3e4;
-  color: #1f6b3b;
-}
-
-.status-dentro {
-  background: #dff3e4;
-  color: #1f6b3b;
-}
-
-.status-fora {
-  background: #ffe5e5;
-  color: #b42318;
-}
-
-/* RESPONSIVIDADE */
-@media (max-width: 1100px) {
-  .patrimonios-layout {
-    grid-template-columns: 1fr;
-  }
-}
-  margin-bottom: 18px;
-}
-
-.campo label {
-  display: block;
-  margin-bottom: 8px;
-  font-weight: 700;
-  color: var(--azul-escuro);
-}
-
-.campo input {
-  width: 100%;
-  padding: 16px;
-  border: 1px solid var(--borda);
-  border-radius: 14px;
-  font-size: 1rem;
-  outline: none;
-  background: #f7fbff;
-}
-
-.campo input:focus {
-  border-color: var(--azul-medio);
-  box-shadow: 0 0 0 4px rgba(31, 111, 235, 0.12);
-}
-
-/* -------------------------
-   11. RESPONSIVIDADE
-------------------------- */
-@media (max-width: 950px) {
-  .hero,
-  .conteudo-login {
-    grid-template-columns: 1fr;
-  }
-
-  .hero-texto h1 {
-    font-size: 2.8rem;
-  }
-}
-
-@media (max-width: 700px) {
-  body {
-    padding: 0 20px 20px;
-  }
-
-  .topo {
-    flex-direction: column;
-    align-items: flex-start;
-    gap: 16px;
-  }
-
-  .hero-texto h1 {
-    font-size: 2.2rem;
-  }
-
-/* =========================
-   MOVIMENTAÇÃO DO PATRIMÔNIO
-========================= */
-.movimentacao-layout {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 24px;
-  margin-top: 24px;
-}
-
-.movimentacao-card {
-  min-height: 320px;
-}
-
-.movimentacao-card h2 {
-  font-size: 2rem;
-  color: var(--azul-escuro);
-  margin-bottom: 24px;
-}
-
-.tag-lida {
-  font-size: 4rem;
-  font-weight: 800;
-  color: #0d1b3d;
-  margin-bottom: 24px;
-  letter-spacing: 2px;
-}
-
-.dados-movimentacao p {
-  font-size: 1rem;
-  color: var(--texto-escuro);
-  margin-bottom: 6px;
-  line-height: 1.5;
-}
-
-.ultima-confirmacao {
-  margin-top: 24px;
-  font-size: 1rem;
-  color: var(--texto-escuro);
-}
-
-.texto-explicativo {
-  font-size: 1rem;
-  line-height: 1.6;
-  color: var(--texto-medio);
-  margin-bottom: 24px;
-  max-width: 650px;
-}
-
-.acoes-movimentacao {
+.botoes,
+.acoes-movimentacao,
+.acoes-tabela {
   display: flex;
-  gap: 16px;
+  gap: 10px;
   flex-wrap: wrap;
-  margin-bottom: 24px;
 }
 
-.btn-status {
+.btn,
+.btn-status,
+.btn-acao,
+.btn-vincular,
+.btn-excluir-sala {
+  width: auto;
   border: none;
-  padding: 16px 26px;
-  border-radius: 16px;
-  font-size: 1rem;
-  font-weight: 700;
-  color: white;
+  background: #2563eb;
+  color: #fff;
   cursor: pointer;
-  transition: 0.3s;
+  text-decoration: none;
+  display: inline-block;
+}
+
+.btn-secundario {
+  background: #6b7280;
 }
 
 .btn-entrando {
   background: #16a34a;
 }
 
-.btn-entrando:hover {
-  background: #15803d;
-  transform: translateY(-2px);
-}
-
 .btn-saindo {
   background: #f59e0b;
 }
 
-.btn-saindo:hover {
-  background: #d97706;
-  transform: translateY(-2px);
-}
-
-.texto-ajuda-movimentacao {
-  font-size: 1rem;
-  line-height: 1.6;
-  color: var(--texto-medio);
-}
-
-@media (max-width: 1000px) {
-  .movimentacao-layout {
-    grid-template-columns: 1fr;
-  }
-
-  .tag-lida {
-    font-size: 2.8rem;
-  }
-}
-
-/* =========================
-   HISTÓRICO DE MOVIMENTAÇÕES
-========================= */
-.historico-card {
-  margin-top: 10px;
-}
-
-.historico-card h2 {
-  font-size: 2.1rem;
-  color: var(--azul-escuro);
-  margin-bottom: 14px;
-}
-
-.historico-subtitulo {
-  color: var(--texto-medio);
-  font-size: 1rem;
-  line-height: 1.7;
-  margin-bottom: 18px;
-}
-
-/* BUSCA */
-.historico-busca {
-  margin-bottom: 22px;
-}
-
-.historico-busca label {
-  display: block;
-  margin-bottom: 10px;
-  font-size: 1rem;
-  font-weight: 700;
-  color: var(--azul-escuro);
-}
-
-.campo-busca {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  background: #f9fbff;
-  border: 1px solid var(--borda);
-  border-radius: 18px;
-  padding: 12px 14px;
-}
-
-.icone-busca {
-  font-size: 1.2rem;
-  line-height: 1;
-}
-
-.campo-busca input {
-  flex: 1;
-  border: none;
-  background: transparent;
-  outline: none;
-  font-size: 1rem;
-  color: var(--texto-escuro);
-}
-
-.campo-busca input::placeholder {
-  color: #72839b;
-}
-
-.btn-limpar {
-  border: none;
-  background: #eef2f6;
-  color: #8c97a6;
-  width: 30px;
-  height: 30px;
-  border-radius: 50%;
-  font-size: 1.2rem;
-  cursor: pointer;
-}
-
-/* TABELA */
-.tabela-historico {
-  width: 100%;
-  min-width: 1100px;
-  border-collapse: collapse;
-}
-
-.tabela-historico thead {
-  background: #eef5ff;
-}
-
-.tabela-historico th,
-.tabela-historico td {
-  padding: 18px 20px;
-  text-align: left;
-  border-bottom: 1px solid #dfe8f5;
-  vertical-align: top;
-}
-
-.tabela-historico th {
-  color: var(--azul-escuro);
-  font-size: 1rem;
-}
-
-.tabela-historico td {
-  color: var(--texto-escuro);
-  font-size: 1rem;
-}
-
-/* BADGES */
-.tipo-badge {
-  display: inline-block;
-  padding: 10px 18px;
-  border-radius: 999px;
-  font-weight: 700;
-  font-size: 0.95rem;
-}
-
-.tipo-entrada {
-  background: #dce9ff;
-  color: #295be6;
-}
-
-.tipo-cadastro {
-  background: #dff3e4;
-  color: #1f6b3b;
-}
-
-.tipo-saida {
-  background: #ffe5cc;
-  color: #b96a00;
-}
-
-/* PATRIMÔNIO */
-.patrimonio-info {
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-}
-
-.patrimonio-info strong {
-  font-size: 1rem;
-  color: var(--texto-escuro);
-}
-
-.patrimonio-info span {
-  color: var(--texto-medio);
-}
-
-/* AÇÕES */
-.acoes-tabela {
-  display: flex;
-  gap: 14px;
-  flex-wrap: wrap;
-}
-
-.btn-acao {
-  border: none;
-  border-radius: 14px;
-  padding: 12px 18px;
-  font-size: 0.95rem;
-  font-weight: 700;
-  cursor: pointer;
-  transition: 0.3s;
+.btn-excluir,
+.btn-excluir-sala {
+  background: #dc2626;
 }
 
 .btn-editar {
-  background: #1da1f2;
-  color: white;
+  background: #0ea5e9;
 }
 
-.btn-editar:hover {
-  background: #0d8ddb;
-  transform: translateY(-1px);
+.tabela-wrapper {
+  overflow-x: auto;
 }
 
-.btn-excluir {
-  background: #e32626;
-  color: white;
-}
-
-.btn-excluir:hover {
-  background: #c81f1f;
-  transform: translateY(-1px);
-}
-
-/* =========================
-   SALAS VINCULADAS
-========================= */
-.salas-layout {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 24px;
-  align-items: start;
-}
-
-.sala-card h2 {
-  font-size: 2rem;
-  color: var(--azul-escuro);
-  margin-bottom: 14px;
-}
-
-.sala-subtitulo {
-  color: var(--texto-medio);
-  font-size: 1rem;
-  line-height: 1.7;
-  margin-bottom: 18px;
-}
-
-.form-sala .campo {
-  margin-bottom: 20px;
-}
-
-.form-sala label,
-.sala-card .campo label {
-  display: block;
-  margin-bottom: 10px;
-  font-size: 1rem;
-  font-weight: 700;
-  color: var(--azul-escuro);
-}
-
-.form-sala input,
-.form-sala select,
-.sala-card .campo input {
+table {
   width: 100%;
-  padding: 16px 18px;
-  border: 1px solid var(--borda);
-  border-radius: 18px;
-  font-size: 1rem;
-  background: #f9fbff;
-  color: var(--texto-escuro);
-  outline: none;
-}
-
-.form-sala input:focus,
-.form-sala select:focus,
-.sala-card .campo input:focus {
-  border-color: var(--azul-medio);
-  box-shadow: 0 0 0 4px rgba(31, 111, 235, 0.10);
-}
-
-.btn-vincular {
-  background: #16a34a;
-  color: white;
-}
-
-.btn-vincular:hover {
-  background: #15803d;
-  transform: translateY(-2px);
-}
-
-.btn-excluir-sala {
-  background: #e32626;
-  color: white;
-}
-
-.btn-excluir-sala:hover {
-  background: #c81f1f;
-  transform: translateY(-1px);
-}
-
-.sala-vazia {
-  margin-top: 18px;
-  border: 1px solid var(--borda);
-  background: #fbfdff;
-  border-radius: 18px;
-  padding: 28px 20px;
-  text-align: center;
-  color: var(--texto-medio);
-  font-size: 1rem;
-}
-
-.tabela-sala-wrapper {
-  margin-top: 18px;
-}
-
-.tabela-sala {
-  width: 100%;
-  min-width: 700px;
   border-collapse: collapse;
+  background: #fff;
 }
 
-.tabela-sala thead {
-  background: #eef5ff;
-}
-
-.tabela-sala th,
-.tabela-sala td {
-  padding: 18px 20px;
+th,
+td {
+  border: 1px solid #e5e7eb;
+  padding: 10px;
   text-align: left;
-  border-bottom: 1px solid #dfe8f5;
-  color: var(--texto-escuro);
-  font-size: 1rem;
 }
 
-.tabela-sala th {
-  color: var(--azul-escuro);
+.status,
+.tipo-badge {
+  padding: 4px 8px;
+  border-radius: 999px;
+  font-size: 12px;
+  display: inline-block;
 }
 
-.tabela-vazia {
-  text-align: center;
-  color: var(--texto-medio);
+.status-dentro,
+.tipo-cadastro {
+  background: #dcfce7;
+  color: #166534;
 }
 
-@media (max-width: 1100px) {
+.status-fora,
+.tipo-saida {
+  background: #fee2e2;
+  color: #991b1b;
+}
+
+.tipo-entrada {
+  background: #dbeafe;
+  color: #1e3a8a;
+}
+
+.tag-lida {
+  font-size: 28px;
+  font-weight: 700;
+}
+
+.foto-mini {
+  width: 64px;
+  height: 64px;
+  object-fit: cover;
+  border-radius: 8px;
+}
+
+@media (max-width: 900px) {
+  .topo {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .hero,
+  .conteudo-login,
+  .patrimonios-layout,
+  .movimentacao-layout,
   .salas-layout {
     grid-template-columns: 1fr;
   }
-}
-
 }

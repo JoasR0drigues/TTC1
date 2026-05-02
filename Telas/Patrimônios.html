@@ -6,7 +6,6 @@
   <title>Patrimônios - Proteção Patrimonial RFID</title>
   <link rel="stylesheet" href="style.css">
 </head>
-
 <body>
   <header class="topo">
     <div class="logo-texto">
@@ -14,143 +13,104 @@
     </div>
 
     <nav class="menu">
-      <a href="index.html">Início</a>
+      <a href="Login.HTML">Início</a>
       <a href="sobre.html">Sobre</a>
-      <a href="sobre.html#design">Design</a>
-      <a href="patrimonios.html" class="ativo">Patrimônios</a>
+      <a href="Patrimônios.html" class="ativo">Patrimônios</a>
+      <a href="historico.html">Histórico</a>
+      <a href="salas-vinculadas.html">Salas Vinculadas</a>
+      <a href="monitoramento-ultrassonico.html">Monitoramento</a>
     </nav>
   </header>
-    <main class="patrimonios-layout">
 
-      <div class="movimentacao-layout">
-
-  <section class="card movimentacao-card">
-    <h2>Leitura pendente</h2>
-
-    <div class="tag-lida">71 53 7F 05</div>
-
-    <div class="dados-movimentacao">
+  <main class="patrimonios-layout">
+    <section class="card">
+      <h2>Leitura pendente</h2>
+      <p class="tag-lida">71 53 7F 05</p>
       <p><strong>Patrimônio:</strong> Nenhum patrimônio identificado</p>
       <p><strong>Código:</strong> --</p>
       <p><strong>Distância:</strong> 175.2 cm</p>
       <p><strong>Horário:</strong> 01/05/2026, 10:23:13</p>
-      <p><strong>Status do patrimônio:</strong> --</p>
-    </div>
+      <p><strong>Status:</strong> --</p>
+    </section>
 
-    <p class="ultima-confirmacao">
-      <strong>Última confirmação:</strong> Aguardando confirmação
-    </p>
-  </section>
+    <section class="card">
+      <h2>Confirmar movimentação</h2>
+      <p>Quando a tag for lida, confirme se o objeto está entrando ou saindo.</p>
+      <div class="acoes-movimentacao">
+        <button class="btn-status btn-entrando">Objeto entrando</button>
+        <button class="btn-status btn-saindo">Objeto saindo</button>
+      </div>
+    </section>
 
-  <section class="card movimentacao-card">
-    <h2>Confirmar movimentação</h2>
-
-    <p class="texto-explicativo">
-      Quando a tag do patrimônio for lida, escolha se o objeto está entrando
-      ou saindo do recinto.
-    </p>
-
-    <div class="acoes-movimentacao">
-      <button class="btn-status btn-entrando">Objeto entrando</button>
-      <button class="btn-status btn-saindo">Objeto saindo</button>
-    </div>
-
-    <p class="texto-ajuda-movimentacao">
-      A confirmação grava um registro em <strong>movimentacoes</strong> e atualiza o status do patrimônio.
-    </p>
-  </section>
-
-</div>  
-
-   
-    <section class="card patrimonio-form-card">
+    <section class="card">
       <h2>Cadastrar patrimônio</h2>
-
       <form class="form-patrimonio">
         <div class="campo">
-        <label for="codigo">Código do patrimônio</label>
-        <input type="text" id="codigo" name="codigo" placeholder="Ex: PAT-001">
+          <label for="codigo">Código do patrimônio</label>
+          <input type="text" id="codigo" name="codigo" placeholder="Ex: PAT-001">
         </div>
 
         <div class="campo">
-        <label for="nome_objeto">Nome do objeto</label>
-        <input type="text" id="nome_objeto" name="nome_objeto" placeholder="Ex: Mesa da sala 01">
+          <label for="nome_objeto">Nome do objeto</label>
+          <input type="text" id="nome_objeto" name="nome_objeto" placeholder="Ex: Mesa da sala 01">
         </div>
 
         <div class="campo">
-        <label for="categoria">Categoria</label>
-        <input type="text" id="categoria" name="categoria" placeholder="Ex: Mobiliário">
-        </div>
-        
-        <div class="campo">
-        <label for="tag_rfid">Tag RFID do objeto</label>
-        <input type="text" id="tag_rfid" name="tag_rfid" placeholder="Ex: A1 B2 C3 D4">
+          <label for="categoria">Categoria</label>
+          <input type="text" id="categoria" name="categoria" placeholder="Ex: Mobiliário">
         </div>
 
         <div class="campo">
-        <label for="localizacao">Localização padrão</label>
-        <input type="text" id="localizacao" name="localizacao" placeholder="Ex: Sala 01">
+          <label for="tag_rfid">Tag RFID do objeto</label>
+          <input type="text" id="tag_rfid" name="tag_rfid" placeholder="Ex: A1 B2 C3 D4">
         </div>
 
         <div class="campo">
-        <label for="descricao">Descrição</label>
-        <textarea id="descricao" name="descricao" placeholder="Descreva o bem patrimonial"></textarea>
+          <label for="localizacao">Localização padrão</label>
+          <input type="text" id="localizacao" name="localizacao" placeholder="Ex: Sala 01">
         </div>
 
         <div class="campo">
-        <label for="foto">Foto do patrimônio</label>
-        <input type="file" id="foto" name="foto" accept="image/*" capture="environment">
-        <small class="texto-ajuda">
-            No celular, esse campo abre a câmera para fotografar o patrimônio.
-          </small>
+          <label for="descricao">Descrição</label>
+          <textarea id="descricao" name="descricao" placeholder="Descreva o bem patrimonial"></textarea>
+        </div>
+
+        <div class="campo">
+          <label for="foto">Foto do patrimônio</label>
+          <input type="file" id="foto" name="foto" accept="image/*" capture="environment">
         </div>
 
         <div class="botoes">
-        <button type="submit" class="btn btn-primario">Salvar patrimônio</button>
+          <button type="submit" class="btn btn-primario">Salvar patrimônio</button>
         </div>
       </form>
     </section>
 
-    <!-- LADO DIREITO -->
-    <section class="card patrimonio-tabela-card">
+    <section class="card">
       <h2>Patrimônios cadastrados</h2>
-
       <div class="tabela-wrapper">
-        <table class="tabela-patrimonios">
-        <thead>
-        <tr>
-        <th>Código</th>
-        <th>Objeto</th>
-        <th>Tag RFID</th>
-        <th>Foto</th>
-        <th>Status atual</th>
-        </tr>
-        </thead>
-
+        <table>
+          <thead>
+            <tr>
+              <th>Código</th>
+              <th>Objeto</th>
+              <th>Tag RFID</th>
+              <th>Foto</th>
+              <th>Status atual</th>
+            </tr>
+          </thead>
           <tbody>
-          <tr>
-          <td>--</td>
-          <td>--</td>
-          <td>--</td>
-          <td>--</td>
-           <td><span class="status status-vazio">--</span></td>
-          </tr>
-
-          <tr>
-          <td>COD-001</td>
-          <td>CADEIRA</td>
-          <td>33 9D F7 0D</td>
-          <td>
-          <img src="cadeira.png" alt="Foto da cadeira" class="foto-mini">
-          </td>
-          <td><span class="status status-dentro">dentro</span></td>
-          </tr>
+            <tr>
+              <td>COD-001</td>
+              <td>CADEIRA</td>
+              <td>33 9D F7 0D</td>
+              <td><img src="cadeira.png" alt="Foto da cadeira" class="foto-mini"></td>
+              <td><span class="status status-dentro">dentro</span></td>
+            </tr>
           </tbody>
         </table>
       </div>
     </section>
-</main>
-</header>
-</head>
+  </main>
 </body>
 </html>
