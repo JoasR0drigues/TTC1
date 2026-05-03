@@ -101,6 +101,23 @@
 
   </main>
 
+  <section id="modal-detalhes-monitorado" class="card" style="display:none; position: fixed; inset: 8% 10%; z-index: 999; overflow-y: auto;">
+    <div class="botoes" style="justify-content: flex-end;">
+      <button type="button" class="btn btn-excluir" id="btn-fechar-detalhes-monitorado">Fechar</button>
+    </div>
+    <h2>Detalhes do patrimônio monitorado</h2>
+    <p><strong>Código:</strong> <span id="detalhe-monitorado-codigo">--</span></p>
+    <p><strong>Nome:</strong> <span id="detalhe-monitorado-nome">--</span></p>
+    <p><strong>Categoria:</strong> <span id="detalhe-monitorado-categoria">--</span></p>
+    <p><strong>UID:</strong> <span id="detalhe-monitorado-tag">--</span></p>
+    <p><strong>Status:</strong> <span id="detalhe-monitorado-status">--</span></p>
+    <p><strong>Descrição:</strong> <span id="detalhe-monitorado-descricao">--</span></p>
+    <p><strong>Localização:</strong> <span id="detalhe-monitorado-localizacao">--</span></p>
+    <div style="margin-top: 12px;">
+      <img id="detalhe-monitorado-foto" alt="Foto do patrimônio monitorado" style="width:100%; max-height:480px; object-fit:contain; border-radius:12px; border:1px solid #ddd6f3; background:#fff;">
+    </div>
+  </section>
+
   <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-database-compat.js"></script>
@@ -122,6 +139,16 @@
     const leituraStatus = document.getElementById("leitura-status");
     const leituraAtualizacao = document.getElementById("leitura-atualizacao");
     const leituraAlerta = document.getElementById("leitura-alerta");
+    const modalDetalhesMonitorado = document.getElementById("modal-detalhes-monitorado");
+    const btnFecharDetalhesMonitorado = document.getElementById("btn-fechar-detalhes-monitorado");
+    const detalheMonitoradoCodigo = document.getElementById("detalhe-monitorado-codigo");
+    const detalheMonitoradoNome = document.getElementById("detalhe-monitorado-nome");
+    const detalheMonitoradoCategoria = document.getElementById("detalhe-monitorado-categoria");
+    const detalheMonitoradoTag = document.getElementById("detalhe-monitorado-tag");
+    const detalheMonitoradoStatus = document.getElementById("detalhe-monitorado-status");
+    const detalheMonitoradoDescricao = document.getElementById("detalhe-monitorado-descricao");
+    const detalheMonitoradoLocalizacao = document.getElementById("detalhe-monitorado-localizacao");
+    const detalheMonitoradoFoto = document.getElementById("detalhe-monitorado-foto");
 
     firebase.initializeApp(window.firebaseConfig);
     const db = firebase.database();
@@ -132,7 +159,8 @@
       ultimaLeitura: null,
       firebaseUid: "",
       salas: [],
-      patrimonios: []
+      patrimonios: [],
+      ultimaLeituraRFID: null
     };
 
     function formatarAgora() {
@@ -152,6 +180,9 @@
 
     function atualizarPainelComLeitura(leitura) {
       const distanciaNumero = Number(leitura?.distancia || 0);
+      const patrimonioResolvido = buscarPatrimonioPorUid(leitura?.uid || "");
+      const patrimonioNome = leitura?.patrimonio_nome || patrimonioResolvido?.nome || "--";
+      const patrimonioCodigo = leitura?.patrimonio_codigo || patrimonioResolvido?.codigo || "--";
       const limite = Number(estado.monitoramentoSala?.limite || 0);
       const salaNome = formatarNomeSala(estado.monitoramentoSala?.sala || "");
       const statusDentro = limite > 0 ? distanciaNumero <= limite : false;
@@ -160,7 +191,7 @@
         : "Sem limite configurado";
 
       leituraSala.textContent = salaNome;
-      leituraPatrimonio.textContent = leitura?.patrimonio_nome || "--";
+      leituraPatrimonio.textContent = patrimonioNome;
       leituraUid.textContent = formatarTag(leitura?.uid);
       leituraDistancia.textContent = `${distanciaNumero.toFixed(1)} cm`;
       leituraLimite.textContent = limite > 0 ? `${limite} cm` : "--";
@@ -175,13 +206,13 @@
       const classeStatus = statusDentro ? "status-dentro" : "status-fora";
       const labelStatus = statusDentro ? "Dentro da sala" : "Fora do limite";
       const colunaAcao = sessao?.role === "admin"
-        ? `<td data-role-required="admin"><div class="acoes-tabela"><button type="button" class="btn btn-excluir btn-excluir-monitorado" data-uid="${leitura?.uid || ""}">Excluir</button></div></td>`
+        ? `<td data-role-required="admin"><div class="acoes-tabela"><button type="button" class="btn btn-editar btn-detalhes-monitorado" data-uid="${leitura?.uid || ""}">Detalhes</button><button type="button" class="btn btn-excluir btn-excluir-monitorado" data-uid="${leitura?.uid || ""}">Excluir</button></div></td>`
         : "";
       tabelaMonitoramentoBody.innerHTML = `
         <tr>
           <td>${salaNome}</td>
-          <td>${leitura?.patrimonio_nome || "--"}</td>
-          <td>${leitura?.patrimonio_codigo || "--"}</td>
+          <td>${patrimonioNome}</td>
+          <td>${patrimonioCodigo}</td>
           <td>${formatarTag(leitura?.uid)}</td>
           <td>${limite > 0 ? `${limite} cm` : "--"}</td>
           <td>${distanciaNumero.toFixed(1)} cm</td>
@@ -202,28 +233,54 @@
     }
 
     function observarLeiturasUltrassonico() {
+      db.ref("leituras_recentes/ultrassonico").on("value", (snapshot) => {
+        const ultra = snapshot.val() || {};
+        estado.ultimaLeitura = {
+          uid: estado.ultimaLeituraRFID?.uid || ultra.uid || "",
+          patrimonio_nome: estado.ultimaLeituraRFID?.patrimonio_nome || "--",
+          patrimonio_codigo: estado.ultimaLeituraRFID?.patrimonio_codigo || "--",
+          distancia: Number(ultra.distancia || 0),
+          timestamp: ultra.timestamp || Date.now()
+        };
+        atualizarPainelComLeitura(estado.ultimaLeitura);
+      });
+    }
+
+    function observarUltimaLeituraRFID() {
       db.ref("leituras_recentes")
-        .limitToLast(30)
+        .limitToLast(40)
         .on("value", (snapshot) => {
           const leituras = snapshot.val() || {};
-          let ultimaLeitura = null;
+          let ultimaRFID = null;
 
           Object.values(leituras).forEach((item) => {
             if (!item) return;
-            if (!ultimaLeitura || Number(item.timestamp || 0) > Number(ultimaLeitura.timestamp || 0)) {
-              ultimaLeitura = item;
+            const uid = String(item.uid || item.uid_tag || "");
+            const ehUltrassonico = uid.toUpperCase() === "SENSOR_ULTRASSONICO" || item.tipo_tag === "ultrassonico";
+            if (ehUltrassonico) return;
+
+            if (!ultimaRFID || Number(item.timestamp || 0) > Number(ultimaRFID.timestamp || 0)) {
+              ultimaRFID = item;
             }
           });
 
-          if (!ultimaLeitura) return;
+          if (!ultimaRFID) return;
 
-          estado.ultimaLeitura = {
-            uid: ultimaLeitura.uid || ultimaLeitura.uid_tag || "",
-            patrimonio_nome: ultimaLeitura.patrimonio_nome || "--",
-            patrimonio_codigo: ultimaLeitura.patrimonio_codigo || "--",
-            distancia: Number(ultimaLeitura.distancia || 0)
+          estado.ultimaLeituraRFID = {
+            uid: ultimaRFID.uid || ultimaRFID.uid_tag || "",
+            patrimonio_nome: ultimaRFID.patrimonio_nome || "--",
+            patrimonio_codigo: ultimaRFID.patrimonio_codigo || "--",
+            timestamp: ultimaRFID.timestamp || Date.now()
           };
 
+          const distanciaAtual = Number(estado.ultimaLeitura?.distancia || 0);
+          estado.ultimaLeitura = {
+            uid: estado.ultimaLeituraRFID.uid,
+            patrimonio_nome: estado.ultimaLeituraRFID.patrimonio_nome,
+            patrimonio_codigo: estado.ultimaLeituraRFID.patrimonio_codigo,
+            distancia: distanciaAtual,
+            timestamp: Date.now()
+          };
           atualizarPainelComLeitura(estado.ultimaLeitura);
         });
     }
@@ -278,6 +335,25 @@
       return estado.patrimonios.find((item) => String(item.uid_tag || "").replace(/\s+/g, "").toUpperCase() === uidNormalizada) || null;
     }
 
+    function abrirDetalhesMonitorado(uid) {
+      const patrimonio = buscarPatrimonioPorUid(uid);
+      if (!patrimonio) {
+        leituraAlerta.textContent = "Nenhum patrimônio encontrado para esta UID.";
+        return;
+      }
+
+      detalheMonitoradoCodigo.textContent = patrimonio.codigo || "--";
+      detalheMonitoradoNome.textContent = patrimonio.nome || "--";
+      detalheMonitoradoCategoria.textContent = patrimonio.categoria || "--";
+      detalheMonitoradoTag.textContent = formatarTag(patrimonio.uid_tag || "");
+      detalheMonitoradoStatus.textContent = patrimonio.status_atual || "--";
+      detalheMonitoradoDescricao.textContent = patrimonio.descricao || "--";
+      detalheMonitoradoLocalizacao.textContent = patrimonio.localizacao_atual || "--";
+      detalheMonitoradoFoto.src = patrimonio.foto_data_url || "";
+      detalheMonitoradoFoto.style.display = patrimonio.foto_data_url ? "block" : "none";
+      modalDetalhesMonitorado.style.display = "block";
+    }
+
     if (salaMonitorada) {
       salaMonitorada.addEventListener("change", function () {
         const salaSelecionada = estado.salas.find((item) => item.id === this.value);
@@ -296,6 +372,11 @@
     tabelaMonitoramentoBody.addEventListener("click", async (event) => {
       const alvo = event.target;
       if (!(alvo instanceof HTMLElement)) return;
+      if (alvo.classList.contains("btn-detalhes-monitorado")) {
+        const uid = alvo.getAttribute("data-uid") || "";
+        abrirDetalhesMonitorado(uid);
+        return;
+      }
       if (!alvo.classList.contains("btn-excluir-monitorado")) return;
       const uid = alvo.getAttribute("data-uid") || "";
       const confirmou = window.confirm("Deseja remover este patrimônio do monitoramento da sala?");
@@ -313,11 +394,16 @@
       leituraAlerta.textContent = "Patrimônio removido do monitoramento da sala.";
     });
 
+    btnFecharDetalhesMonitorado.addEventListener("click", () => {
+      modalDetalhesMonitorado.style.display = "none";
+    });
+
     async function iniciar() {
       try {
         await garantirUsuarioFirebase();
         carregarSalasMonitoramento();
         carregarPatrimoniosMonitoramento();
+        observarUltimaLeituraRFID();
         observarLeiturasUltrassonico();
       } catch (erro) {
         leituraAlerta.textContent = "Falha ao conectar no Firebase.";
