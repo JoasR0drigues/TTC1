@@ -332,6 +332,7 @@
         const formData = new FormData(refs.formPatrimonio);
         const fotoDataUrl = await lerArquivoComoDataUrl(formData.get("foto"));
         const uidTag = normalizarTag(formData.get("tag_rfid"));
+        const limiteUltrassonico = Number(String(formData.get("limite") || "").replace(/[^\d.,-]/g, "").replace(",", ".") || 0);
 
         if (!uidTag) {
           refs.movimentacaoMsg.textContent = "Informe a tag RFID do patrimônio.";
@@ -351,6 +352,7 @@
           localizacao_atual: "--",
           status_atual: "dentro",
           descricao: String(formData.get("descricao") || "").trim(),
+          limite_ultrassonico: limiteUltrassonico > 0 ? limiteUltrassonico : 0,
           foto_data_url: fotoDataUrl,
           criado_em: Date.now()
         };
@@ -399,6 +401,17 @@
           return;
         }
 
+        if (tipo === "entrada") {
+          const limiteSala = await obterLimitePermitidoPatrimonio(patrimonio);
+          if (limiteSala > 0) {
+            const distanciaAtual = await obterDistanciaUltrassonicoAtual();
+            if (distanciaAtual > limiteSala) {
+              refs.movimentacaoMsg.textContent = `Entrada bloqueada: distância atual (${distanciaAtual.toFixed(1)} cm) excede o limite da sala (${limiteSala} cm).`;
+              return;
+            }
+          }
+        }
+
         await db.ref("movimentacoes").push({
           patrimonio_id: patrimonio.id,
           patrimonio_nome: patrimonio.nome,
@@ -426,6 +439,22 @@
       } catch (erro) {
         refs.movimentacaoMsg.textContent = "Erro ao salvar movimentação no Firebase.";
       }
+    }
+
+    async function obterDistanciaUltrassonicoAtual() {
+      const leituraUltraSnap = await db.ref("leituras_recentes/ultrassonico").once("value");
+      const leituraUltra = leituraUltraSnap.val() || {};
+      return Number(leituraUltra.distancia || 0);
+    }
+
+    async function obterLimitePermitidoPatrimonio(patrimonio) {
+      if (patrimonio?.sala_id_atual) {
+        const salaSnap = await db.ref(`salas/${estado.firebaseUid}/${patrimonio.sala_id_atual}`).once("value");
+        const sala = salaSnap.val() || {};
+        const limiteSala = Number(sala.limite_cm || 0);
+        if (limiteSala > 0) return limiteSala;
+      }
+      return Number(patrimonio?.limite_ultrassonico || 0);
     }
 
     async function excluirPatrimonio(patrimonioId, uidTag) {
@@ -480,6 +509,8 @@
       } else if (alvo.classList.contains("btn-excluir-patrimonio")) {
         const patrimonioId = alvo.getAttribute("data-id") || "";
         const uidTag = alvo.getAttribute("data-tag") || "";
+        const confirmou = window.confirm("Deseja realmente excluir este patrimônio?");
+        if (!confirmou) return;
         excluirPatrimonio(patrimonioId, uidTag);
       }
     });

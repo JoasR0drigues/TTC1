@@ -117,7 +117,9 @@
           <td>${item.uid || "--"}</td>
           <td>${item.confirmadoPor || "--"}</td>
           <td>${item.localizacao || "--"}</td>
-          <td>${sessao?.role === "admin" ? '<span class="status status-dentro">Registro</span>' : "--"}</td>
+          <td>${sessao?.role === "admin"
+            ? `<button type="button" class="btn btn-excluir btn-excluir-historico" data-id="${item.id || ""}" data-origem="${item.origem || ""}">Excluir</button>`
+            : "--"}</td>
         </tr>
       `).join("");
     }
@@ -137,9 +139,11 @@
       const movimentacoes = snapshotMov.val() || {};
       const itens = [];
 
-      Object.values(acessos).forEach((item) => {
+      Object.entries(acessos).forEach(([id, item]) => {
         if (!item?.uid) return;
         itens.push({
+          id,
+          origem: "acessos",
           tipo: item.tipo_tag === "usuario" ? "leitura-usuario" : "leitura-tag",
           patrimonio: item.patrimonio_nome || item.nome || "Tag lida",
           uid: item.uid || item.uid_key || "--",
@@ -149,9 +153,11 @@
         });
       });
 
-      Object.values(movimentacoes).forEach((item) => {
+      Object.entries(movimentacoes).forEach(([id, item]) => {
         if (!item) return;
         itens.push({
+          id,
+          origem: "movimentacoes",
           tipo: item.tipo || "movimentacao",
           patrimonio: item.patrimonio_nome || item.patrimonio_codigo || "--",
           uid: item.uid_tag || "--",
@@ -163,6 +169,12 @@
 
       historicoCompleto = itens.sort((a, b) => Number(b.timestamp || 0) - Number(a.timestamp || 0));
       aplicarFiltro();
+    }
+
+    async function excluirRegistroHistorico(id, origem) {
+      if (!id || !origem || sessao?.role !== "admin") return;
+      const caminho = origem === "movimentacoes" ? `movimentacoes/${id}` : `acessos/${id}`;
+      await db.ref(caminho).remove();
     }
 
     async function iniciar() {
@@ -187,6 +199,17 @@
     btnLimpar.addEventListener("click", () => {
       buscaHistorico.value = "";
       aplicarFiltro();
+    });
+
+    historicoBody.addEventListener("click", async (event) => {
+      const alvo = event.target;
+      if (!(alvo instanceof HTMLElement)) return;
+      if (!alvo.classList.contains("btn-excluir-historico")) return;
+      const id = alvo.getAttribute("data-id") || "";
+      const origem = alvo.getAttribute("data-origem") || "";
+      const confirmou = window.confirm("Deseja realmente excluir este registro do histórico?");
+      if (!confirmou) return;
+      await excluirRegistroHistorico(id, origem);
     });
 
     iniciar();

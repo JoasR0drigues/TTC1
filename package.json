@@ -9,6 +9,10 @@
   "description": "",
   "main": "firebaseconfig.js",
   "scripts": {
+    "dev": "npx -y firebase-tools@latest emulators:start --only hosting",
+    "deploy:hosting": "npx -y firebase-tools@latest deploy --only hosting",
+    "deploy:database": "npx -y firebase-tools@latest deploy --only database",
+    "deploy:all": "npx -y firebase-tools@latest deploy --only hosting,database",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "repository": {

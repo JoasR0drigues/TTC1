@@ -131,7 +131,8 @@
       monitoramentoSala: JSON.parse(localStorage.getItem("monitoramentoSalaConfig") || "null"),
       ultimaLeitura: null,
       firebaseUid: "",
-      salas: []
+      salas: [],
+      patrimonios: []
     };
 
     function formatarAgora() {
@@ -174,7 +175,7 @@
       const classeStatus = statusDentro ? "status-dentro" : "status-fora";
       const labelStatus = statusDentro ? "Dentro da sala" : "Fora do limite";
       const colunaAcao = sessao?.role === "admin"
-        ? '<td data-role-required="admin"><div class="acoes-tabela"><button type="button" class="btn btn-editar">Detalhes</button></div></td>'
+        ? `<td data-role-required="admin"><div class="acoes-tabela"><button type="button" class="btn btn-excluir btn-excluir-monitorado" data-uid="${leitura?.uid || ""}">Excluir</button></div></td>`
         : "";
       tabelaMonitoramentoBody.innerHTML = `
         <tr>
@@ -265,6 +266,18 @@
       });
     }
 
+    function carregarPatrimoniosMonitoramento() {
+      db.ref("patrimonios").orderByChild("usuario_uid").equalTo(estado.firebaseUid).on("value", (snapshot) => {
+        const dados = snapshot.val() || {};
+        estado.patrimonios = Object.values(dados);
+      });
+    }
+
+    function buscarPatrimonioPorUid(uid) {
+      const uidNormalizada = String(uid || "").replace(/\s+/g, "").toUpperCase();
+      return estado.patrimonios.find((item) => String(item.uid_tag || "").replace(/\s+/g, "").toUpperCase() === uidNormalizada) || null;
+    }
+
     if (salaMonitorada) {
       salaMonitorada.addEventListener("change", function () {
         const salaSelecionada = estado.salas.find((item) => item.id === this.value);
@@ -280,10 +293,31 @@
       });
     }
 
+    tabelaMonitoramentoBody.addEventListener("click", async (event) => {
+      const alvo = event.target;
+      if (!(alvo instanceof HTMLElement)) return;
+      if (!alvo.classList.contains("btn-excluir-monitorado")) return;
+      const uid = alvo.getAttribute("data-uid") || "";
+      const confirmou = window.confirm("Deseja remover este patrimônio do monitoramento da sala?");
+      if (!confirmou) return;
+      const patrimonio = buscarPatrimonioPorUid(uid);
+      const salaId = estado.monitoramentoSala?.sala || "";
+      if (!patrimonio?.id || !salaId) return;
+
+      await db.ref(`salas_patrimonios/${estado.firebaseUid}/${salaId}/${patrimonio.id}`).remove();
+      await db.ref(`patrimonios/${patrimonio.id}`).update({
+        localizacao_atual: "--",
+        sala_id_atual: "",
+        atualizado_em: Date.now()
+      });
+      leituraAlerta.textContent = "Patrimônio removido do monitoramento da sala.";
+    });
+
     async function iniciar() {
       try {
         await garantirUsuarioFirebase();
         carregarSalasMonitoramento();
+        carregarPatrimoniosMonitoramento();
         observarLeiturasUltrassonico();
       } catch (erro) {
         leituraAlerta.textContent = "Falha ao conectar no Firebase.";

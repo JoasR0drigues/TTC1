@@ -109,6 +109,12 @@
     <section class="card sala-card">
       <h2>Patrimônios da sala</h2>
       <p class="sala-subtitulo" id="subtitulo-sala-patrimonios">Selecione uma sala para exibir patrimônios vinculados.</p>
+      <div class="campo">
+        <label for="sala-visualizacao">Sala para visualizar patrimônios</label>
+        <select id="sala-visualizacao" name="sala-visualizacao">
+          <option value="">Selecione uma sala</option>
+        </select>
+      </div>
 
       <div class="tabela-wrapper tabela-sala-wrapper">
         <table class="tabela-sala">
@@ -118,17 +124,35 @@
               <th>Patrimônio</th>
               <th>Status</th>
               <th>Localização</th>
+              <th>Ações</th>
             </tr>
           </thead>
           <tbody id="tabela-patrimonios-sala-body">
             <tr>
-              <td colspan="4" class="tabela-vazia">Nenhum patrimônio vinculado.</td>
+              <td colspan="5" class="tabela-vazia">Nenhum patrimônio vinculado.</td>
             </tr>
           </tbody>
         </table>
       </div>
     </section>
   </main>
+
+  <section id="modal-detalhes-sala" class="card" style="display:none; position: fixed; inset: 8% 10%; z-index: 999; overflow-y: auto;">
+    <div class="botoes" style="justify-content: flex-end;">
+      <button type="button" class="btn btn-excluir" id="btn-fechar-detalhes-sala">Fechar</button>
+    </div>
+    <h2>Detalhes do patrimônio</h2>
+    <p><strong>Código:</strong> <span id="detalhe-sala-codigo">--</span></p>
+    <p><strong>Nome:</strong> <span id="detalhe-sala-nome">--</span></p>
+    <p><strong>Categoria:</strong> <span id="detalhe-sala-categoria">--</span></p>
+    <p><strong>Tag RFID:</strong> <span id="detalhe-sala-tag">--</span></p>
+    <p><strong>Status:</strong> <span id="detalhe-sala-status">--</span></p>
+    <p><strong>Descrição:</strong> <span id="detalhe-sala-descricao">--</span></p>
+    <p><strong>Localização atual:</strong> <span id="detalhe-sala-localizacao">--</span></p>
+    <div style="margin-top: 12px;">
+      <img id="detalhe-sala-foto" alt="Foto do patrimônio" style="width:100%; max-height:480px; object-fit:contain; border-radius:12px; border:1px solid #ddd6f3; background:#fff;">
+    </div>
+  </section>
 
   <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
@@ -147,11 +171,22 @@
     const msgSalaCriada = document.getElementById("msg-sala-criada");
     const msgVinculo = document.getElementById("msg-vinculo");
     const salaCadastrada = document.getElementById("sala-cadastrada");
+    const salaVisualizacao = document.getElementById("sala-visualizacao");
     const patrimonioVinculo = document.getElementById("patrimonio-vinculo");
     const buscarSalaInput = document.getElementById("buscar-sala");
     const tabelaSalasBody = document.getElementById("tabela-salas-body");
     const tabelaPatrimoniosSalaBody = document.getElementById("tabela-patrimonios-sala-body");
     const subtituloSalaPatrimonios = document.getElementById("subtitulo-sala-patrimonios");
+    const modalDetalhesSala = document.getElementById("modal-detalhes-sala");
+    const btnFecharDetalhesSala = document.getElementById("btn-fechar-detalhes-sala");
+    const detalheSalaCodigo = document.getElementById("detalhe-sala-codigo");
+    const detalheSalaNome = document.getElementById("detalhe-sala-nome");
+    const detalheSalaCategoria = document.getElementById("detalhe-sala-categoria");
+    const detalheSalaTag = document.getElementById("detalhe-sala-tag");
+    const detalheSalaStatus = document.getElementById("detalhe-sala-status");
+    const detalheSalaDescricao = document.getElementById("detalhe-sala-descricao");
+    const detalheSalaLocalizacao = document.getElementById("detalhe-sala-localizacao");
+    const detalheSalaFoto = document.getElementById("detalhe-sala-foto");
 
     const estado = {
       uid: "",
@@ -161,8 +196,14 @@
 
     function renderSelectSalas() {
       const selecionadaAtual = salaCadastrada.value;
-      salaCadastrada.innerHTML = '<option value="">Selecione uma sala</option>' +
+      const visualizacaoAtual = salaVisualizacao.value;
+      const optionsHtml = '<option value="">Selecione uma sala</option>' +
         estado.salas.map((sala) => `<option value="${sala.id}">${sala.nome_local} - ${sala.nome_sala}</option>`).join("");
+      salaCadastrada.innerHTML = optionsHtml;
+      salaVisualizacao.innerHTML = optionsHtml;
+      if (visualizacaoAtual) {
+        salaVisualizacao.value = visualizacaoAtual;
+      }
       if (selecionadaAtual) {
         salaCadastrada.value = selecionadaAtual;
       }
@@ -202,9 +243,9 @@
     }
 
     function renderPatrimoniosDaSala(vinculos) {
-      const salaId = salaCadastrada.value;
+      const salaId = salaVisualizacao.value;
       if (!salaId) {
-        tabelaPatrimoniosSalaBody.innerHTML = '<tr><td colspan="4" class="tabela-vazia">Nenhum patrimônio vinculado.</td></tr>';
+        tabelaPatrimoniosSalaBody.innerHTML = '<tr><td colspan="5" class="tabela-vazia">Nenhum patrimônio vinculado.</td></tr>';
         subtituloSalaPatrimonios.textContent = "Selecione uma sala para exibir patrimônios vinculados.";
         return;
       }
@@ -217,7 +258,7 @@
       const ids = Object.keys(vinculos || {});
       const itens = estado.patrimonios.filter((item) => ids.includes(item.id));
       if (!itens.length) {
-        tabelaPatrimoniosSalaBody.innerHTML = '<tr><td colspan="4" class="tabela-vazia">Nenhum patrimônio vinculado.</td></tr>';
+        tabelaPatrimoniosSalaBody.innerHTML = '<tr><td colspan="5" class="tabela-vazia">Nenhum patrimônio vinculado.</td></tr>';
         return;
       }
 
@@ -227,8 +268,57 @@
           <td>${item.nome || "--"}</td>
           <td><span class="status ${item.status_atual === "fora" ? "status-fora" : "status-dentro"}">${item.status_atual || "dentro"}</span></td>
           <td>${sala ? `${sala.nome_local} - ${sala.nome_sala}` : "--"}</td>
+          <td>
+            <div class="acoes-tabela">
+              <button type="button" class="btn btn-editar btn-detalhes-patrimonio-sala" data-id="${item.id || ""}">Detalhes</button>
+              <button type="button" class="btn btn-excluir btn-excluir-patrimonio-sala" data-id="${item.id || ""}">Excluir</button>
+            </div>
+          </td>
         </tr>
       `).join("");
+    }
+
+    function formatarTag(tag) {
+      const limpa = String(tag || "").replace(/\s+/g, "").toUpperCase();
+      return limpa ? limpa.replace(/(.{2})(?=.)/g, "$1 ").trim() : "--";
+    }
+
+    function abrirDetalhesPatrimonioSala(patrimonioId) {
+      const patrimonio = estado.patrimonios.find((item) => item.id === patrimonioId);
+      if (!patrimonio) return;
+      detalheSalaCodigo.textContent = patrimonio.codigo || "--";
+      detalheSalaNome.textContent = patrimonio.nome || "--";
+      detalheSalaCategoria.textContent = patrimonio.categoria || "--";
+      detalheSalaTag.textContent = formatarTag(patrimonio.uid_tag || "");
+      detalheSalaStatus.textContent = patrimonio.status_atual || "--";
+      detalheSalaDescricao.textContent = patrimonio.descricao || "--";
+      detalheSalaLocalizacao.textContent = patrimonio.localizacao_atual || "--";
+      detalheSalaFoto.src = patrimonio.foto_data_url || "";
+      detalheSalaFoto.style.display = patrimonio.foto_data_url ? "block" : "none";
+      modalDetalhesSala.style.display = "block";
+    }
+
+    async function excluirPatrimonioDaSala(patrimonioId) {
+      const salaId = salaVisualizacao.value;
+      if (!patrimonioId || !salaId) return;
+      const confirmou = window.confirm("Deseja excluir este patrimônio desta sala?");
+      if (!confirmou) return;
+
+      await db.ref(`salas_patrimonios/${estado.uid}/${salaId}/${patrimonioId}`).remove();
+      const patrimonioRef = db.ref(`patrimonios/${patrimonioId}`);
+      const patrimonioSnap = await patrimonioRef.once("value");
+      const patrimonio = patrimonioSnap.val() || {};
+      if (patrimonio.sala_id_atual === salaId || patrimonio.sala_id_padrao === salaId) {
+        await patrimonioRef.update({
+          localizacao_atual: "--",
+          localizacao_padrao: "--",
+          sala_id_atual: "",
+          sala_id_padrao: "",
+          atualizado_em: Date.now()
+        });
+      }
+      msgVinculo.textContent = "Patrimônio removido da sala com sucesso.";
+      observarVinculosDaSala();
     }
 
     function carregarSalas() {
@@ -241,7 +331,7 @@
     }
 
     function carregarPatrimonios() {
-      db.ref("patrimonios").on("value", (snapshot) => {
+      db.ref("patrimonios").orderByChild("usuario_uid").equalTo(estado.uid).on("value", (snapshot) => {
         const dados = snapshot.val() || {};
         estado.patrimonios = Object.values(dados);
         renderSelectPatrimonios();
@@ -249,7 +339,7 @@
     }
 
     function observarVinculosDaSala() {
-      const salaId = salaCadastrada.value;
+      const salaId = salaVisualizacao.value;
       if (!salaId) {
         renderPatrimoniosDaSala({});
         return;
@@ -286,19 +376,26 @@
         return;
       }
 
-      const sala = estado.salas.find((item) => item.id === salaId);
-      await db.ref(`salas_patrimonios/${estado.uid}/${salaId}/${patrimonioId}`).set(true);
-      await db.ref(`patrimonios/${patrimonioId}`).update({
-        localizacao_padrao: sala ? `${sala.nome_local} - ${sala.nome_sala}` : "--",
-        localizacao_atual: sala ? `${sala.nome_local} - ${sala.nome_sala}` : "--",
-        atualizado_em: Date.now()
-      });
+      try {
+        const sala = estado.salas.find((item) => item.id === salaId);
+        await db.ref(`salas_patrimonios/${estado.uid}/${salaId}/${patrimonioId}`).set(true);
+        await db.ref(`patrimonios/${patrimonioId}`).update({
+          localizacao_padrao: sala ? `${sala.nome_local} - ${sala.nome_sala}` : "--",
+          localizacao_atual: sala ? `${sala.nome_local} - ${sala.nome_sala}` : "--",
+          sala_id_padrao: salaId,
+          sala_id_atual: salaId,
+          atualizado_em: Date.now()
+        });
 
-      msgVinculo.textContent = "Patrimônio vinculado com sucesso.";
-      observarVinculosDaSala();
+        salaVisualizacao.value = salaId;
+        msgVinculo.textContent = "Patrimônio vinculado com sucesso.";
+        observarVinculosDaSala();
+      } catch (erro) {
+        msgVinculo.textContent = "Erro ao vincular patrimônio na sala.";
+      }
     });
 
-    salaCadastrada.addEventListener("change", observarVinculosDaSala);
+    salaVisualizacao.addEventListener("change", observarVinculosDaSala);
     buscarSalaInput.addEventListener("input", renderTabelaSalas);
 
     tabelaSalasBody.addEventListener("click", async (event) => {
@@ -308,13 +405,34 @@
 
       const salaId = alvo.getAttribute("data-id") || "";
       if (!salaId) return;
+      const confirmou = window.confirm("Deseja realmente excluir esta sala?");
+      if (!confirmou) return;
       await db.ref(`salas/${estado.uid}/${salaId}`).remove();
       await db.ref(`salas_patrimonios/${estado.uid}/${salaId}`).remove();
       msgVinculo.textContent = "Sala excluída com sucesso.";
       if (salaCadastrada.value === salaId) {
         salaCadastrada.value = "";
       }
+      if (salaVisualizacao.value === salaId) {
+        salaVisualizacao.value = "";
+      }
       observarVinculosDaSala();
+    });
+
+    tabelaPatrimoniosSalaBody.addEventListener("click", (event) => {
+      const alvo = event.target;
+      if (!(alvo instanceof HTMLElement)) return;
+      if (alvo.classList.contains("btn-detalhes-patrimonio-sala")) {
+        const patrimonioId = alvo.getAttribute("data-id") || "";
+        abrirDetalhesPatrimonioSala(patrimonioId);
+      } else if (alvo.classList.contains("btn-excluir-patrimonio-sala")) {
+        const patrimonioId = alvo.getAttribute("data-id") || "";
+        excluirPatrimonioDaSala(patrimonioId);
+      }
+    });
+
+    btnFecharDetalhesSala.addEventListener("click", () => {
+      modalDetalhesSala.style.display = "none";
     });
 
     async function iniciar() {
