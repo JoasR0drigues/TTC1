@@ -233,7 +233,12 @@
             <td>${formatarTag(item.uid_tag || "")}</td>
             <td>${fotoHtml}</td>
             <td><span class="status ${classeStatus}">${item.status_atual || "dentro"}</span></td>
-            <td><button type="button" class="btn btn-editar btn-detalhes-patrimonio" data-id="${item.id || ""}">Detalhes</button></td>
+            <td>
+              <div class="acoes-tabela">
+                <button type="button" class="btn btn-editar btn-detalhes-patrimonio" data-id="${item.id || ""}">Detalhes</button>
+                <button type="button" class="btn btn-excluir btn-excluir-patrimonio" data-id="${item.id || ""}" data-tag="${item.uid_tag || ""}">Excluir</button>
+              </div>
+            </td>
           </tr>
         `;
       }).join("");
@@ -423,6 +428,31 @@
       }
     }
 
+    async function excluirPatrimonio(patrimonioId, uidTag) {
+      if (!patrimonioId) return;
+      try {
+        const updates = {};
+        updates[`patrimonios/${patrimonioId}`] = null;
+        if (uidTag) {
+          const tagNormalizada = normalizarTag(uidTag);
+          updates[`tags_patrimonio/${tagNormalizada}`] = null;
+          updates[`usuarios/${tagNormalizada}`] = null;
+        }
+
+        const salasVinculoSnap = await db.ref(`salas_patrimonios/${estado.firebaseUid}`).once("value");
+        const salasVinculo = salasVinculoSnap.val() || {};
+        Object.keys(salasVinculo).forEach((salaId) => {
+          updates[`salas_patrimonios/${estado.firebaseUid}/${salaId}/${patrimonioId}`] = null;
+        });
+
+        await db.ref().update(updates);
+        refs.modalDetalhes.style.display = "none";
+        refs.movimentacaoMsg.textContent = "Patrimônio excluído com sucesso.";
+      } catch (erro) {
+        refs.movimentacaoMsg.textContent = "Erro ao excluir patrimônio.";
+      }
+    }
+
     async function iniciar() {
       try {
         await garantirUsuarioFirebase();
@@ -447,6 +477,10 @@
       if (alvo.classList.contains("btn-detalhes-patrimonio")) {
         const patrimonioId = alvo.getAttribute("data-id") || "";
         abrirDetalhesPatrimonio(patrimonioId);
+      } else if (alvo.classList.contains("btn-excluir-patrimonio")) {
+        const patrimonioId = alvo.getAttribute("data-id") || "";
+        const uidTag = alvo.getAttribute("data-tag") || "";
+        excluirPatrimonio(patrimonioId, uidTag);
       }
     });
 

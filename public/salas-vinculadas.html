@@ -94,11 +94,12 @@
               <th>Local</th>
               <th>Sala</th>
               <th>Limite (cm)</th>
+              <th>Ações</th>
             </tr>
           </thead>
           <tbody id="tabela-salas-body">
             <tr>
-              <td colspan="3" class="tabela-vazia">Nenhuma sala encontrada.</td>
+              <td colspan="4" class="tabela-vazia">Nenhuma sala encontrada.</td>
             </tr>
           </tbody>
         </table>
@@ -108,10 +109,6 @@
     <section class="card sala-card">
       <h2>Patrimônios da sala</h2>
       <p class="sala-subtitulo" id="subtitulo-sala-patrimonios">Selecione uma sala para exibir patrimônios vinculados.</p>
-
-      <div class="botoes">
-        <button type="button" class="btn btn-excluir-sala" id="btn-excluir-sala">Excluir sala selecionada</button>
-      </div>
 
       <div class="tabela-wrapper tabela-sala-wrapper">
         <table class="tabela-sala">
@@ -155,7 +152,6 @@
     const tabelaSalasBody = document.getElementById("tabela-salas-body");
     const tabelaPatrimoniosSalaBody = document.getElementById("tabela-patrimonios-sala-body");
     const subtituloSalaPatrimonios = document.getElementById("subtitulo-sala-patrimonios");
-    const btnExcluirSala = document.getElementById("btn-excluir-sala");
 
     const estado = {
       uid: "",
@@ -164,13 +160,21 @@
     };
 
     function renderSelectSalas() {
+      const selecionadaAtual = salaCadastrada.value;
       salaCadastrada.innerHTML = '<option value="">Selecione uma sala</option>' +
         estado.salas.map((sala) => `<option value="${sala.id}">${sala.nome_local} - ${sala.nome_sala}</option>`).join("");
+      if (selecionadaAtual) {
+        salaCadastrada.value = selecionadaAtual;
+      }
     }
 
     function renderSelectPatrimonios() {
+      const patrimonioSelecionado = patrimonioVinculo.value;
       patrimonioVinculo.innerHTML = '<option value="">Selecione um patrimônio</option>' +
         estado.patrimonios.map((item) => `<option value="${item.id}">${item.nome} - ${item.codigo}</option>`).join("");
+      if (patrimonioSelecionado) {
+        patrimonioVinculo.value = patrimonioSelecionado;
+      }
     }
 
     function renderTabelaSalas() {
@@ -181,7 +185,7 @@
       });
 
       if (!lista.length) {
-        tabelaSalasBody.innerHTML = '<tr><td colspan="3" class="tabela-vazia">Nenhuma sala encontrada.</td></tr>';
+        tabelaSalasBody.innerHTML = '<tr><td colspan="4" class="tabela-vazia">Nenhuma sala encontrada.</td></tr>';
         return;
       }
 
@@ -190,6 +194,9 @@
           <td>${sala.nome_local}</td>
           <td>${sala.nome_sala}</td>
           <td>${sala.limite_cm || "--"}</td>
+          <td>
+            <button type="button" class="btn btn-excluir btn-excluir-sala-linha" data-id="${sala.id}">Excluir</button>
+          </td>
         </tr>
       `).join("");
     }
@@ -234,7 +241,7 @@
     }
 
     function carregarPatrimonios() {
-      db.ref("patrimonios").orderByChild("usuario_uid").equalTo(estado.uid).on("value", (snapshot) => {
+      db.ref("patrimonios").on("value", (snapshot) => {
         const dados = snapshot.val() || {};
         estado.patrimonios = Object.values(dados);
         renderSelectPatrimonios();
@@ -294,12 +301,19 @@
     salaCadastrada.addEventListener("change", observarVinculosDaSala);
     buscarSalaInput.addEventListener("input", renderTabelaSalas);
 
-    btnExcluirSala.addEventListener("click", async () => {
-      const salaId = salaCadastrada.value;
+    tabelaSalasBody.addEventListener("click", async (event) => {
+      const alvo = event.target;
+      if (!(alvo instanceof HTMLElement)) return;
+      if (!alvo.classList.contains("btn-excluir-sala-linha")) return;
+
+      const salaId = alvo.getAttribute("data-id") || "";
       if (!salaId) return;
       await db.ref(`salas/${estado.uid}/${salaId}`).remove();
       await db.ref(`salas_patrimonios/${estado.uid}/${salaId}`).remove();
       msgVinculo.textContent = "Sala excluída com sucesso.";
+      if (salaCadastrada.value === salaId) {
+        salaCadastrada.value = "";
+      }
       observarVinculosDaSala();
     });
 
