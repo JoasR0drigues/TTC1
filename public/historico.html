@@ -17,7 +17,7 @@
     <a href="Patrimônios.html">Patrimônios</a>
     <a href="historico.html" class="ativo">Histórico</a>
     <a href="salas-vinculadas.html">Salas Vinculadas</a>
-    <a href="monitoramento-ultrassonico.html">Monitoramento Ultrassônico</a>
+    <a href="monitoramento-ultrassonico.html">Monitoramento</a>
     </nav>
   </header>
 
@@ -41,7 +41,7 @@
     </div>
     </div>
 
-      <div class="tabela-wrapper">
+    <div class="tabela-wrapper">
     <table class="tabela-historico">
     <thead>
     <tr>
@@ -51,48 +51,12 @@
     <th>UID</th>
     <th>Confirmado por</th>
     <th>Localização</th>
-    <th data-role-required="admin">Ações</th>
+    <th>Ações</th>
     </tr>
     </thead>
-    <tbody>
+    <tbody id="historico-body">
     <tr>
-    <td>01/05/2026, 10:26:11</td>
-    <td><span class="tipo-badge tipo-entrada">entrada</span></td>
-    <td>
-    <div class="patrimonio-info">
-    <strong></strong>
-    <span></span>
-    </div>
-    </td>
-    <td></td>
-    <td></td>
-    <td></td>
-    <td data-role-required="admin">
-    <div class="acoes-tabela" data-role-required="admin">
-    <button class="btn-acao btn-editar">Editar</button>
-    <button class="btn-acao btn-excluir">Excluir histórico</button>
-    </div>
-    </td>
-    </tr>
-
-    <tr>
-    <td>01/05/2026, 10:26:04</td>
-    <td><span class="tipo-badge tipo-cadastro">cadastro</span></td>
-    <td>
-    <div class="patrimonio-info">
-    <strong></strong>
-    <span></span>
-    </div>
-    </td>
-    <td></td>
-    <td></td>
-    <td></td>
-    <td data-role-required="admin">
-    <div class="acoes-tabela" data-role-required="admin">
-    <button class="btn-acao btn-editar">Editar</button>
-    <button class="btn-acao btn-excluir">Excluir histórico</button>
-    </div>
-    </td>
+    <td colspan="7" class="tabela-vazia">Nenhuma movimentação encontrada.</td>
     </tr>
     </tbody>
     </table>
@@ -100,9 +64,132 @@
     </section>
   </main>
 
+  <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-database-compat.js"></script>
+  <script src="firebaseconfig.js"></script>
   <script src="auth.js"></script>
   <script>
-    AuthApp.protegerPagina({ allowedRoles: ["admin", "comum"] });
+    const sessao = AuthApp.protegerPagina({ allowedRoles: ["admin", "comum"] });
+    firebase.initializeApp(window.firebaseConfig);
+
+    const auth = firebase.auth();
+    const db = firebase.database();
+    const buscaHistorico = document.getElementById("busca-historico");
+    const btnLimpar = document.querySelector(".btn-limpar");
+    const historicoBody = document.getElementById("historico-body");
+    let historicoCompleto = [];
+
+    function formatarDataHora(valor) {
+      const numero = Number(valor || 0);
+      if (!numero) return "--";
+      const ms = numero < 9999999999 ? numero * 1000 : numero;
+      return new Date(ms).toLocaleString("pt-BR");
+    }
+
+    function classeTipo(tipo) {
+      if (tipo === "entrada") return "tipo-badge tipo-entrada";
+      if (tipo === "saida") return "tipo-badge tipo-saida";
+      return "tipo-badge tipo-cadastro";
+    }
+
+    function textoParaFiltro(item) {
+      return [
+        item.tipo,
+        item.patrimonio,
+        item.uid,
+        item.confirmadoPor,
+        item.localizacao
+      ].join(" ").toLowerCase();
+    }
+
+    function renderHistorico(lista) {
+      if (!lista.length) {
+        historicoBody.innerHTML = '<tr><td colspan="7" class="tabela-vazia">Nenhuma movimentação encontrada.</td></tr>';
+        return;
+      }
+
+      historicoBody.innerHTML = lista.map((item) => `
+        <tr>
+          <td>${formatarDataHora(item.timestamp)}</td>
+          <td><span class="${classeTipo(item.tipo)}">${item.tipo}</span></td>
+          <td><strong>${item.patrimonio || "--"}</strong></td>
+          <td>${item.uid || "--"}</td>
+          <td>${item.confirmadoPor || "--"}</td>
+          <td>${item.localizacao || "--"}</td>
+          <td>${sessao?.role === "admin" ? '<span class="status status-dentro">Registro</span>' : "--"}</td>
+        </tr>
+      `).join("");
+    }
+
+    function aplicarFiltro() {
+      const filtro = (buscaHistorico.value || "").trim().toLowerCase();
+      if (!filtro) {
+        renderHistorico(historicoCompleto);
+        return;
+      }
+      const filtrada = historicoCompleto.filter((item) => textoParaFiltro(item).includes(filtro));
+      renderHistorico(filtrada);
+    }
+
+    function carregarHistorico(snapshotAcessos, snapshotMov) {
+      const acessos = snapshotAcessos.val() || {};
+      const movimentacoes = snapshotMov.val() || {};
+      const itens = [];
+
+      Object.values(acessos).forEach((item) => {
+        if (!item?.uid) return;
+        itens.push({
+          tipo: item.tipo_tag === "usuario" ? "leitura-usuario" : "leitura-tag",
+          patrimonio: item.patrimonio_nome || item.nome || "Tag lida",
+          uid: item.uid || item.uid_key || "--",
+          confirmadoPor: "ESP32",
+          localizacao: item.objeto_detectado ? "Recinto monitorado" : "Sem confirmação",
+          timestamp: item.timestamp || 0
+        });
+      });
+
+      Object.values(movimentacoes).forEach((item) => {
+        if (!item) return;
+        itens.push({
+          tipo: item.tipo || "movimentacao",
+          patrimonio: item.patrimonio_nome || item.patrimonio_codigo || "--",
+          uid: item.uid_tag || "--",
+          confirmadoPor: item.confirmado_por || "--",
+          localizacao: item.tipo === "entrada" ? "Dentro do recinto" : "Fora do recinto",
+          timestamp: item.timestamp || 0
+        });
+      });
+
+      historicoCompleto = itens.sort((a, b) => Number(b.timestamp || 0) - Number(a.timestamp || 0));
+      aplicarFiltro();
+    }
+
+    async function iniciar() {
+      try {
+        await auth.signInAnonymously();
+        db.ref("acessos").on("value", (snapshotAcessos) => {
+          db.ref("movimentacoes").once("value").then((snapshotMov) => {
+            carregarHistorico(snapshotAcessos, snapshotMov);
+          });
+        });
+        db.ref("movimentacoes").on("value", (snapshotMov) => {
+          db.ref("acessos").once("value").then((snapshotAcessos) => {
+            carregarHistorico(snapshotAcessos, snapshotMov);
+          });
+        });
+      } catch (erro) {
+        historicoBody.innerHTML = '<tr><td colspan="7" class="tabela-vazia">Falha ao carregar histórico do Firebase.</td></tr>';
+      }
+    }
+
+    buscaHistorico.addEventListener("input", aplicarFiltro);
+    btnLimpar.addEventListener("click", () => {
+      buscaHistorico.value = "";
+      aplicarFiltro();
+    });
+
+    iniciar();
   </script>
 </body>
 </html>

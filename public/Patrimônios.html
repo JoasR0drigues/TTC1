@@ -13,6 +13,7 @@
     </div>
 
     <nav class="menu">
+      
       <a href="Patrimônios.html" class="ativo">Patrimônios</a>
       <a href="historico.html">Histórico</a>
       <a href="salas-vinculadas.html">Salas Vinculadas</a>
@@ -50,22 +51,27 @@
       <form class="form-patrimonio" id="form-patrimonio">
         <div class="campo">
           <label for="codigo">Código do patrimônio</label>
-          <input type="text" id="codigo" name="codigo" placeholder="Ex: PAT-001" required>
+          <input type="text" id="codigo" name="codigo" placeholder="Ex: PATRI-001" required>
         </div>
 
         <div class="campo">
           <label for="nome_objeto">Nome do objeto</label>
-          <input type="text" id="nome_objeto" name="nome_objeto" placeholder="Ex: Mesa da sala 01" required>
+          <input type="text" id="nome_objeto" name="nome_objeto" placeholder="Ex: Mesa-001" required>
         </div>
 
         <div class="campo">
           <label for="categoria">Categoria</label>
-          <input type="text" id="categoria" name="categoria" placeholder="Ex: Mobiliário">
+          <input type="text" id="categoria" name="categoria" placeholder="Ex:MÓVEL">
         </div>
 
         <div class="campo">
           <label for="tag_rfid">Tag RFID do objeto</label>
           <input type="text" id="tag_rfid" name="tag_rfid" placeholder="Ex: A1 B2 C3 D4" required>
+        </div>
+
+        <div class="campo">
+          <label for="limite">Limitedo do Ultrassônico</label>
+          <input type="text" id="limite" name="limite" placeholder="Ex: 100cm" required>
         </div>
 
         <div class="campo">
@@ -95,17 +101,35 @@
         <th>Tag RFID</th>
         <th>Foto</th>
         <th>Status atual</th>
+        <th>Ações</th>
         </tr>
         </thead>
         <tbody id="tabela-patrimonios-body">
        <tr>
-        <td colspan="5" class="tabela-vazia">Nenhum patrimônio cadastrado.</td>
+        <td colspan="6" class="tabela-vazia">Nenhum patrimônio cadastrado.</td>
         </tr>
         </tbody>
         </table>
       </div>
     </section>
   </main>
+
+  <section id="modal-detalhes-patrimonio" class="card" style="display:none; position: fixed; inset: 8% 10%; z-index: 999; overflow-y: auto;">
+    <div class="botoes" style="justify-content: flex-end;">
+      <button type="button" class="btn btn-excluir" id="btn-fechar-detalhes">Fechar</button>
+    </div>
+    <h2>Detalhes do patrimônio</h2>
+    <p><strong>Código:</strong> <span id="detalhe-codigo">--</span></p>
+    <p><strong>Nome:</strong> <span id="detalhe-nome">--</span></p>
+    <p><strong>Categoria:</strong> <span id="detalhe-categoria">--</span></p>
+    <p><strong>Tag RFID:</strong> <span id="detalhe-tag">--</span></p>
+    <p><strong>Status:</strong> <span id="detalhe-status">--</span></p>
+    <p><strong>Descrição:</strong> <span id="detalhe-descricao">--</span></p>
+    <p><strong>Criado em:</strong> <span id="detalhe-criado-em">--</span></p>
+    <div style="margin-top: 12px;">
+      <img id="detalhe-foto" alt="Foto completa do patrimônio" style="width:100%; max-height:480px; object-fit:contain; border-radius:12px; border:1px solid #ddd6f3; background:#fff;">
+    </div>
+  </section>
 
   <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
@@ -133,7 +157,17 @@
       btnSaindo: document.getElementById("btn-saindo"),
       movimentacaoMsg: document.getElementById("movimentacao-msg"),
       formPatrimonio: document.getElementById("form-patrimonio"),
-      tabelaBody: document.getElementById("tabela-patrimonios-body")
+      tabelaBody: document.getElementById("tabela-patrimonios-body"),
+      modalDetalhes: document.getElementById("modal-detalhes-patrimonio"),
+      btnFecharDetalhes: document.getElementById("btn-fechar-detalhes"),
+      detalheCodigo: document.getElementById("detalhe-codigo"),
+      detalheNome: document.getElementById("detalhe-nome"),
+      detalheCategoria: document.getElementById("detalhe-categoria"),
+      detalheTag: document.getElementById("detalhe-tag"),
+      detalheStatus: document.getElementById("detalhe-status"),
+      detalheDescricao: document.getElementById("detalhe-descricao"),
+      detalheCriadoEm: document.getElementById("detalhe-criado-em"),
+      detalheFoto: document.getElementById("detalhe-foto")
     };
 
     firebase.initializeApp(window.firebaseConfig);
@@ -183,7 +217,7 @@
 
     function renderTabela() {
       if (!estado.patrimonios.length) {
-        refs.tabelaBody.innerHTML = '<tr><td colspan="5" class="tabela-vazia">Nenhum patrimônio cadastrado.</td></tr>';
+        refs.tabelaBody.innerHTML = '<tr><td colspan="6" class="tabela-vazia">Nenhum patrimônio cadastrado.</td></tr>';
         return;
       }
 
@@ -199,9 +233,26 @@
             <td>${formatarTag(item.uid_tag || "")}</td>
             <td>${fotoHtml}</td>
             <td><span class="status ${classeStatus}">${item.status_atual || "dentro"}</span></td>
+            <td><button type="button" class="btn btn-editar btn-detalhes-patrimonio" data-id="${item.id || ""}">Detalhes</button></td>
           </tr>
         `;
       }).join("");
+    }
+
+    function abrirDetalhesPatrimonio(patrimonioId) {
+      const patrimonio = estado.patrimonios.find((item) => item.id === patrimonioId);
+      if (!patrimonio) return;
+
+      refs.detalheCodigo.textContent = patrimonio.codigo || "--";
+      refs.detalheNome.textContent = patrimonio.nome || "--";
+      refs.detalheCategoria.textContent = patrimonio.categoria || "--";
+      refs.detalheTag.textContent = formatarTag(patrimonio.uid_tag || "");
+      refs.detalheStatus.textContent = patrimonio.status_atual || "--";
+      refs.detalheDescricao.textContent = patrimonio.descricao || "--";
+      refs.detalheCriadoEm.textContent = patrimonio.criado_em ? new Date(patrimonio.criado_em).toLocaleString("pt-BR") : "--";
+      refs.detalheFoto.src = patrimonio.foto_data_url || "";
+      refs.detalheFoto.style.display = patrimonio.foto_data_url ? "block" : "none";
+      refs.modalDetalhes.style.display = "block";
     }
 
     function observarPatrimonios() {
@@ -389,6 +440,19 @@
       refs.btnSaindo.addEventListener("click", () => confirmarMovimentacao("saida"));
       refs.formPatrimonio.addEventListener("submit", cadastrarPatrimonio);
     }
+
+    refs.tabelaBody.addEventListener("click", (event) => {
+      const alvo = event.target;
+      if (!(alvo instanceof HTMLElement)) return;
+      if (alvo.classList.contains("btn-detalhes-patrimonio")) {
+        const patrimonioId = alvo.getAttribute("data-id") || "";
+        abrirDetalhesPatrimonio(patrimonioId);
+      }
+    });
+
+    refs.btnFecharDetalhes.addEventListener("click", () => {
+      refs.modalDetalhes.style.display = "none";
+    });
 
     renderTabela();
     iniciar();

@@ -11,14 +11,14 @@
   --border-strong: #c4b5fd;
   --text: #312e3f;
   --text-soft: #6b6480;
-  --primary: #7c6ab8;
-  --primary-hover: #6d5aa8;
+  --primary: #2c2449;
+  --primary-hover: #170450;
   --primary-light: #ede9fe;
   --success: #6aa68b;
   --warning: #d4a45a;
   --danger: #c96b76;
   --info: #7f8ed9;
-  --shadow: 0 10px 30px rgba(93, 70, 140, 0.08);
+  --shadow: 0 10px 30px rgba(25, 0, 94, 0.08);
   --radius: 12px;
 }
 

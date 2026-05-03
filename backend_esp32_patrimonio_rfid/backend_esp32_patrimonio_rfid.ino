@@ -44,7 +44,8 @@
 const float DISTANCIA_LIMITE = 10.0;
 const int NUM_LEITURAS = 3;
 const unsigned long INTERVALO_LEITURA_RFID = 150;
-const unsigned long INTERVALO_DISTANCIA = 500;
+const unsigned long INTERVALO_DISTANCIA = 1000;
+const unsigned long INTERVALO_ENVIO_ULTRASSONICO = 3000;
 const unsigned long INTERVALO_DEBUG = 2000;
 const unsigned long TEMPO_BLOQUEIO_UID_REPETIDO = 3000;
 
@@ -63,6 +64,7 @@ bool objetoDetectado = false;
 
 unsigned long ultimoPollRFID = 0;
 unsigned long ultimoPollDistancia = 0;
+unsigned long ultimoEnvioUltrassonico = 0;
 unsigned long ultimoDebug = 0;
 unsigned long tempoUltimoUID = 0;
 
@@ -191,6 +193,25 @@ void loop() {
     ultimoPollDistancia = millis();
     distancia = medirDistancia();
     objetoDetectado = (distancia > 0 && distancia <= DISTANCIA_LIMITE);
+  }
+
+  if (firebaseOK && millis() - ultimoEnvioUltrassonico >= INTERVALO_ENVIO_ULTRASSONICO) {
+    ultimoEnvioUltrassonico = millis();
+    StaticJsonDocument<256> ultraDoc;
+    ultraDoc["uid"] = "SENSOR_ULTRASSONICO";
+    ultraDoc["uid_key"] = "SENSOR_ULTRASSONICO";
+    ultraDoc["tipo_tag"] = "ultrassonico";
+    ultraDoc["distancia"] = distancia;
+    ultraDoc["objeto_detectado"] = objetoDetectado;
+    ultraDoc["timestamp"] = obterTimestamp();
+
+    String ultraPayload;
+    serializeJson(ultraDoc, ultraPayload);
+    String ultraResponse;
+
+    if (!firebasePutJSON("/leituras_recentes/ultrassonico", ultraPayload, ultraResponse)) {
+      Serial.println("Erro ao enviar distancia ultrassonica em tempo real.");
+    }
   }
 
   if (millis() - ultimoDebug >= INTERVALO_DEBUG) {

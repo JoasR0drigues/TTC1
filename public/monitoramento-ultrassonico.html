@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Monitoramento Ultrassônico</title>
+  <title>Monitoramento </title>
   <link rel="stylesheet" href="style.css">
 </head>
 <body>
@@ -13,6 +13,7 @@
     </div>
 
     <nav class="menu">
+      
       <a href="Patrimônios.html">Patrimônios</a>
       <a href="historico.html">Histórico</a>
       <a href="salas-vinculadas.html">Salas Vinculadas</a>
@@ -21,7 +22,6 @@
   </header>
 
   <main class="movimentacao-layout">
-
     <section class="card" data-role-required="admin">
       <h2>Cadastro de monitoramento por sala</h2>
       <p class="sala-subtitulo">
@@ -29,14 +29,11 @@
         cadastrado para a sala e emitirá alerta caso algum patrimônio vinculado ultrapasse esse limite.
       </p>
 
-      <form class="form-sala">
+      <form class="form-sala" id="form-monitoramento-sala">
         <div class="campo">
           <label for="sala-monitorada">Sala vinculada</label>
           <select id="sala-monitorada" name="sala-monitorada">
             <option value="">Selecione uma sala vinculada</option>
-            <option value="sala01">Bloco Administrativo - Sala 01</option>
-            <option value="sala02">Bloco Administrativo - Sala 02</option>
-            <option value="recepcao">Recepção - Sala Principal</option>
           </select>
         </div>
 
@@ -61,14 +58,14 @@
       <h2>Leitura atual monitorada</h2>
 
       <div class="leitura-atual">
-        <p><strong>Sala monitorada:</strong> --</p>
-        <p><strong>Patrimônio detectado:</strong> --</p>
-        <p><strong>UID:</strong> --</p>
-        <p><strong>Distância atual:</strong> --</p>
-        <p><strong>Limite da sala:</strong> --</p>
-        <p><strong>Status:</strong> --</p>
-        <p><strong>Atualização:</strong> --</p>
-        <p><strong>Último alerta:</strong> --</p>
+        <p><strong>Sala monitorada:</strong> <span id="leitura-sala">--</span></p>
+        <p><strong>Patrimônio detectado:</strong> <span id="leitura-patrimonio">--</span></p>
+        <p><strong>UID:</strong> <span id="leitura-uid">--</span></p>
+        <p><strong>Distância atual:</strong> <span id="leitura-distancia">--</span></p>
+        <p><strong>Limite da sala:</strong> <span id="leitura-limite">--</span></p>
+        <p><strong>Status:</strong> <span id="leitura-status">--</span></p>
+        <p><strong>Atualização:</strong> <span id="leitura-atualizacao">--</span></p>
+        <p><strong>Último alerta:</strong> <span id="leitura-alerta">--</span></p>
       </div>
     </section>
 
@@ -91,41 +88,7 @@
               <th data-role-required="admin">Ações</th>
             </tr>
           </thead>
-          <tbody>
-            <tr>
-              <td>Bloco Administrativo - Sala 01</td>
-              <td>Cadeira</td>
-              <td>COD-001</td>
-              <td>04 A7 B2 19</td>
-              <td>300 cm</td>
-              <td>250 cm</td>
-              <td><span class="status status-dentro">Dentro da sala</span></td>
-              <td>250 cm</td>
-              <td>02/05/2026 19:40</td>
-              <td data-role-required="admin">
-                <div class="acoes-tabela">
-                  <button type="button" class="btn btn-editar">Detalhes</button>
-                </div>
-              </td>
-            </tr>
-
-            <tr>
-              <td>Bloco Administrativo - Sala 01</td>
-              <td>Notebook</td>
-              <td>COD-003</td>
-              <td>19 C3 8F 44</td>
-              <td>300 cm</td>
-              <td>355 cm</td>
-              <td><span class="status status-fora">Fora do limite</span></td>
-              <td>355 cm</td>
-              <td>02/05/2026 19:41</td>
-              <td data-role-required="admin">
-                <div class="acoes-tabela">
-                  <button type="button" class="btn btn-excluir">Gerar alerta</button>
-                </div>
-              </td>
-            </tr>
-
+          <tbody id="tabela-monitoramento-body">
             <tr>
               <td colspan="10" class="tabela-vazia">
                 Nenhum patrimônio monitorado no momento.
@@ -138,25 +101,197 @@
 
   </main>
 
+  <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-database-compat.js"></script>
+  <script src="firebaseconfig.js"></script>
   <script src="auth.js"></script>
   <script>
-    AuthApp.protegerPagina({ allowedRoles: ["admin", "comum"] });
+    const sessao = AuthApp.protegerPagina({ allowedRoles: ["admin", "comum"] });
 
     const salaMonitorada = document.getElementById("sala-monitorada");
     const limiteSalaMonitorada = document.getElementById("limite-sala-monitorada");
+    const formMonitoramentoSala = document.getElementById("form-monitoramento-sala");
+    const tabelaMonitoramentoBody = document.getElementById("tabela-monitoramento-body");
 
-    const limitesSalas = {
-      sala01: 300,
-      sala02: 450,
-      recepcao: 200
+    const leituraSala = document.getElementById("leitura-sala");
+    const leituraPatrimonio = document.getElementById("leitura-patrimonio");
+    const leituraUid = document.getElementById("leitura-uid");
+    const leituraDistancia = document.getElementById("leitura-distancia");
+    const leituraLimite = document.getElementById("leitura-limite");
+    const leituraStatus = document.getElementById("leitura-status");
+    const leituraAtualizacao = document.getElementById("leitura-atualizacao");
+    const leituraAlerta = document.getElementById("leitura-alerta");
+
+    firebase.initializeApp(window.firebaseConfig);
+    const db = firebase.database();
+    const auth = firebase.auth();
+
+    const estado = {
+      monitoramentoSala: JSON.parse(localStorage.getItem("monitoramentoSalaConfig") || "null"),
+      ultimaLeitura: null,
+      firebaseUid: "",
+      salas: []
     };
+
+    function formatarAgora() {
+      return new Date().toLocaleString("pt-BR");
+    }
+
+    function formatarTag(uid) {
+      const limpa = String(uid || "").replace(/\s+/g, "").toUpperCase();
+      return limpa ? limpa.replace(/(.{2})(?=.)/g, "$1 ").trim() : "--";
+    }
+
+    function formatarNomeSala(chaveSala) {
+      const sala = estado.salas.find((item) => item.id === chaveSala);
+      if (sala) return `${sala.nome_local} - ${sala.nome_sala}`;
+      return "--";
+    }
+
+    function atualizarPainelComLeitura(leitura) {
+      const distanciaNumero = Number(leitura?.distancia || 0);
+      const limite = Number(estado.monitoramentoSala?.limite || 0);
+      const salaNome = formatarNomeSala(estado.monitoramentoSala?.sala || "");
+      const statusDentro = limite > 0 ? distanciaNumero <= limite : false;
+      const statusTexto = limite > 0
+        ? (statusDentro ? "Dentro da sala" : "Fora do limite")
+        : "Sem limite configurado";
+
+      leituraSala.textContent = salaNome;
+      leituraPatrimonio.textContent = leitura?.patrimonio_nome || "--";
+      leituraUid.textContent = formatarTag(leitura?.uid);
+      leituraDistancia.textContent = `${distanciaNumero.toFixed(1)} cm`;
+      leituraLimite.textContent = limite > 0 ? `${limite} cm` : "--";
+      leituraStatus.textContent = statusTexto;
+      leituraStatus.className = statusDentro ? "status status-dentro" : "status status-fora";
+      leituraAtualizacao.textContent = formatarAgora();
+
+      if (!statusDentro && limite > 0) {
+        leituraAlerta.textContent = `${formatarAgora()} - Distância acima do limite`;
+      }
+
+      const classeStatus = statusDentro ? "status-dentro" : "status-fora";
+      const labelStatus = statusDentro ? "Dentro da sala" : "Fora do limite";
+      const colunaAcao = sessao?.role === "admin"
+        ? '<td data-role-required="admin"><div class="acoes-tabela"><button type="button" class="btn btn-editar">Detalhes</button></div></td>'
+        : "";
+      tabelaMonitoramentoBody.innerHTML = `
+        <tr>
+          <td>${salaNome}</td>
+          <td>${leitura?.patrimonio_nome || "--"}</td>
+          <td>${leitura?.patrimonio_codigo || "--"}</td>
+          <td>${formatarTag(leitura?.uid)}</td>
+          <td>${limite > 0 ? `${limite} cm` : "--"}</td>
+          <td>${distanciaNumero.toFixed(1)} cm</td>
+          <td><span class="status ${classeStatus}">${labelStatus}</span></td>
+          <td>${distanciaNumero.toFixed(1)} cm</td>
+          <td>${formatarAgora()}</td>
+          ${colunaAcao}
+        </tr>
+      `;
+    }
+
+    async function garantirUsuarioFirebase() {
+      if (!auth.currentUser) {
+        await auth.signInAnonymously();
+      }
+      estado.firebaseUid = auth.currentUser.uid;
+      return estado.firebaseUid;
+    }
+
+    function observarLeiturasUltrassonico() {
+      db.ref("leituras_recentes")
+        .limitToLast(30)
+        .on("value", (snapshot) => {
+          const leituras = snapshot.val() || {};
+          let ultimaLeitura = null;
+
+          Object.values(leituras).forEach((item) => {
+            if (!item) return;
+            if (!ultimaLeitura || Number(item.timestamp || 0) > Number(ultimaLeitura.timestamp || 0)) {
+              ultimaLeitura = item;
+            }
+          });
+
+          if (!ultimaLeitura) return;
+
+          estado.ultimaLeitura = {
+            uid: ultimaLeitura.uid || ultimaLeitura.uid_tag || "",
+            patrimonio_nome: ultimaLeitura.patrimonio_nome || "--",
+            patrimonio_codigo: ultimaLeitura.patrimonio_codigo || "--",
+            distancia: Number(ultimaLeitura.distancia || 0)
+          };
+
+          atualizarPainelComLeitura(estado.ultimaLeitura);
+        });
+    }
+
+    function salvarConfiguracaoSala() {
+      if (!salaMonitorada || !limiteSalaMonitorada) return;
+      estado.monitoramentoSala = {
+        sala: salaMonitorada.value,
+        limite: Number(limiteSalaMonitorada.value || 0)
+      };
+      localStorage.setItem("monitoramentoSalaConfig", JSON.stringify(estado.monitoramentoSala));
+    }
+
+    function restaurarConfiguracoes() {
+      if (estado.monitoramentoSala && salaMonitorada && limiteSalaMonitorada) {
+        salaMonitorada.value = estado.monitoramentoSala.sala || "";
+        limiteSalaMonitorada.value = estado.monitoramentoSala.limite || "";
+      }
+
+      leituraAlerta.textContent = "--";
+      leituraStatus.className = "";
+      leituraAtualizacao.textContent = "--";
+    }
+
+    function carregarSalasMonitoramento() {
+      db.ref(`salas/${estado.firebaseUid}`).on("value", (snapshot) => {
+        const dados = snapshot.val() || {};
+        estado.salas = Object.entries(dados).map(([id, valor]) => ({ id, ...valor }));
+        const options = ['<option value="">Selecione uma sala vinculada</option>']
+          .concat(estado.salas.map((sala) => `<option value="${sala.id}">${sala.nome_local} - ${sala.nome_sala}</option>`));
+        salaMonitorada.innerHTML = options.join("");
+
+        if (estado.monitoramentoSala?.sala) {
+          salaMonitorada.value = estado.monitoramentoSala.sala;
+          const salaAtual = estado.salas.find((item) => item.id === estado.monitoramentoSala.sala);
+          limiteSalaMonitorada.value = salaAtual?.limite_cm || "";
+          estado.monitoramentoSala.limite = Number(salaAtual?.limite_cm || 0);
+          localStorage.setItem("monitoramentoSalaConfig", JSON.stringify(estado.monitoramentoSala));
+        }
+      });
+    }
 
     if (salaMonitorada) {
       salaMonitorada.addEventListener("change", function () {
-        const salaSelecionada = this.value;
-        limiteSalaMonitorada.value = limitesSalas[salaSelecionada] || "";
+        const salaSelecionada = estado.salas.find((item) => item.id === this.value);
+        limiteSalaMonitorada.value = salaSelecionada?.limite_cm || "";
+        salvarConfiguracaoSala();
       });
     }
+
+    if (formMonitoramentoSala) {
+      formMonitoramentoSala.addEventListener("submit", function (event) {
+        event.preventDefault();
+        salvarConfiguracaoSala();
+      });
+    }
+
+    async function iniciar() {
+      try {
+        await garantirUsuarioFirebase();
+        carregarSalasMonitoramento();
+        observarLeiturasUltrassonico();
+      } catch (erro) {
+        leituraAlerta.textContent = "Falha ao conectar no Firebase.";
+      }
+    }
+
+    restaurarConfiguracoes();
+    iniciar();
   </script>
 </body>
 </html>

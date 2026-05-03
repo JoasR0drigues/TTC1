@@ -7,7 +7,6 @@
   <link rel="stylesheet" href="style.css">
 </head>
 <body>
-
   <header class="topo">
     <div class="logo-texto">
       <span class="logo-destaque">Proteção</span> Patrimonial RFID
@@ -17,44 +16,38 @@
       <a href="Patrimônios.html">Patrimônios</a>
       <a href="historico.html">Histórico</a>
       <a href="salas-vinculadas.html" class="ativo">Salas Vinculadas</a>
-      <a href="monitoramento-ultrassonico.html">Monitoramento Ultrassônico</a>
+      <a href="monitoramento-ultrassonico.html">Monitoramento</a>
     </nav>
   </header>
 
   <main class="salas-layout">
-
     <section class="card sala-card">
       <h2>Cadastrar local e sala</h2>
       <p class="sala-subtitulo">
         Crie os ambientes para organizar os patrimônios por local e sala.
       </p>
 
-      <form class="form-sala">
+      <form class="form-sala" id="form-criar-sala">
         <div class="campo">
           <label for="nome-local">Nome do local</label>
-          <input type="text" id="nome-local" name="nome-local" placeholder="Ex: Bloco Administrativo">
+          <input type="text" id="nome-local" name="nome-local" placeholder="Ex: UEG" required>
         </div>
 
         <div class="campo">
           <label for="sala-especifica">Sala específica</label>
-          <input type="text" id="sala-especifica" name="sala-especifica" placeholder="Ex: Sala 01">
+          <input type="text" id="sala-especifica" name="sala-especifica" placeholder="Ex: Sala-001" required>
         </div>
 
         <div class="campo">
           <label for="limite-sala">Limite da sala (em cm)</label>
-          <input
-            type="number"
-            id="limite-sala"
-            name="limite-sala"
-            placeholder="Ex: 300"
-            min="1"
-          >
+          <input type="number" id="limite-sala" name="limite-sala" placeholder="Ex: 300" min="1" required>
           <small>Informe a distância máxima para considerar que o patrimônio está dentro da sala.</small>
         </div>
 
         <div class="botoes">
           <button type="submit" class="btn btn-primario">Criar sala</button>
         </div>
+        <p id="msg-sala-criada"></p>
       </form>
     </section>
 
@@ -64,30 +57,25 @@
         Escolha uma sala e um patrimônio para definir a localização padrão.
       </p>
 
-      <form class="form-sala">
+      <form class="form-sala" id="form-vincular-sala">
         <div class="campo">
           <label for="sala-cadastrada">Sala cadastrada</label>
           <select id="sala-cadastrada" name="sala-cadastrada">
-            <option>Selecione uma sala</option>
-            <option>Bloco Administrativo - Sala 01</option>
-            <option>Bloco Administrativo - Sala 02</option>
-            <option>Recepção - Sala Principal</option>
+            <option value="">Selecione uma sala</option>
           </select>
         </div>
 
         <div class="campo">
           <label for="patrimonio-vinculo">Patrimônio</label>
           <select id="patrimonio-vinculo" name="patrimonio-vinculo">
-            <option>Selecione um patrimônio</option>
-            <option>CADEIRA - COD-001</option>
-            <option>MESA - COD-002</option>
-            <option>NOTEBOOK - COD-003</option>
+            <option value="">Selecione um patrimônio</option>
           </select>
         </div>
 
         <div class="botoes">
           <button type="submit" class="btn btn-vincular">Vincular patrimônio</button>
         </div>
+        <p id="msg-vinculo"></p>
       </form>
     </section>
 
@@ -99,19 +87,30 @@
         <input type="text" id="buscar-sala" name="buscar-sala" placeholder="Ex: Bloco A ou Sala 01">
       </div>
 
-      <div class="sala-vazia">
-        Nenhuma sala encontrada.
+      <div class="tabela-wrapper">
+        <table>
+          <thead>
+            <tr>
+              <th>Local</th>
+              <th>Sala</th>
+              <th>Limite (cm)</th>
+            </tr>
+          </thead>
+          <tbody id="tabela-salas-body">
+            <tr>
+              <td colspan="3" class="tabela-vazia">Nenhuma sala encontrada.</td>
+            </tr>
+          </tbody>
+        </table>
       </div>
     </section>
 
     <section class="card sala-card">
       <h2>Patrimônios da sala</h2>
-      <p class="sala-subtitulo">
-        Nenhuma sala disponível para exibir patrimônios vinculados.
-      </p>
+      <p class="sala-subtitulo" id="subtitulo-sala-patrimonios">Selecione uma sala para exibir patrimônios vinculados.</p>
 
       <div class="botoes">
-        <button type="button" class="btn btn-excluir-sala">Excluir sala selecionada</button>
+        <button type="button" class="btn btn-excluir-sala" id="btn-excluir-sala">Excluir sala selecionada</button>
       </div>
 
       <div class="tabela-wrapper tabela-sala-wrapper">
@@ -124,7 +123,7 @@
               <th>Localização</th>
             </tr>
           </thead>
-          <tbody>
+          <tbody id="tabela-patrimonios-sala-body">
             <tr>
               <td colspan="4" class="tabela-vazia">Nenhum patrimônio vinculado.</td>
             </tr>
@@ -132,12 +131,187 @@
         </table>
       </div>
     </section>
-
   </main>
 
+  <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-database-compat.js"></script>
+  <script src="firebaseconfig.js"></script>
   <script src="auth.js"></script>
   <script>
     AuthApp.protegerPagina({ allowedRoles: ["admin"] });
+    firebase.initializeApp(window.firebaseConfig);
+
+    const auth = firebase.auth();
+    const db = firebase.database();
+
+    const formCriarSala = document.getElementById("form-criar-sala");
+    const formVincularSala = document.getElementById("form-vincular-sala");
+    const msgSalaCriada = document.getElementById("msg-sala-criada");
+    const msgVinculo = document.getElementById("msg-vinculo");
+    const salaCadastrada = document.getElementById("sala-cadastrada");
+    const patrimonioVinculo = document.getElementById("patrimonio-vinculo");
+    const buscarSalaInput = document.getElementById("buscar-sala");
+    const tabelaSalasBody = document.getElementById("tabela-salas-body");
+    const tabelaPatrimoniosSalaBody = document.getElementById("tabela-patrimonios-sala-body");
+    const subtituloSalaPatrimonios = document.getElementById("subtitulo-sala-patrimonios");
+    const btnExcluirSala = document.getElementById("btn-excluir-sala");
+
+    const estado = {
+      uid: "",
+      salas: [],
+      patrimonios: []
+    };
+
+    function renderSelectSalas() {
+      salaCadastrada.innerHTML = '<option value="">Selecione uma sala</option>' +
+        estado.salas.map((sala) => `<option value="${sala.id}">${sala.nome_local} - ${sala.nome_sala}</option>`).join("");
+    }
+
+    function renderSelectPatrimonios() {
+      patrimonioVinculo.innerHTML = '<option value="">Selecione um patrimônio</option>' +
+        estado.patrimonios.map((item) => `<option value="${item.id}">${item.nome} - ${item.codigo}</option>`).join("");
+    }
+
+    function renderTabelaSalas() {
+      const filtro = (buscarSalaInput.value || "").trim().toLowerCase();
+      const lista = estado.salas.filter((item) => {
+        const texto = `${item.nome_local} ${item.nome_sala}`.toLowerCase();
+        return texto.includes(filtro);
+      });
+
+      if (!lista.length) {
+        tabelaSalasBody.innerHTML = '<tr><td colspan="3" class="tabela-vazia">Nenhuma sala encontrada.</td></tr>';
+        return;
+      }
+
+      tabelaSalasBody.innerHTML = lista.map((sala) => `
+        <tr>
+          <td>${sala.nome_local}</td>
+          <td>${sala.nome_sala}</td>
+          <td>${sala.limite_cm || "--"}</td>
+        </tr>
+      `).join("");
+    }
+
+    function renderPatrimoniosDaSala(vinculos) {
+      const salaId = salaCadastrada.value;
+      if (!salaId) {
+        tabelaPatrimoniosSalaBody.innerHTML = '<tr><td colspan="4" class="tabela-vazia">Nenhum patrimônio vinculado.</td></tr>';
+        subtituloSalaPatrimonios.textContent = "Selecione uma sala para exibir patrimônios vinculados.";
+        return;
+      }
+
+      const sala = estado.salas.find((item) => item.id === salaId);
+      subtituloSalaPatrimonios.textContent = sala
+        ? `Patrimônios vinculados em ${sala.nome_local} - ${sala.nome_sala}.`
+        : "Patrimônios vinculados.";
+
+      const ids = Object.keys(vinculos || {});
+      const itens = estado.patrimonios.filter((item) => ids.includes(item.id));
+      if (!itens.length) {
+        tabelaPatrimoniosSalaBody.innerHTML = '<tr><td colspan="4" class="tabela-vazia">Nenhum patrimônio vinculado.</td></tr>';
+        return;
+      }
+
+      tabelaPatrimoniosSalaBody.innerHTML = itens.map((item) => `
+        <tr>
+          <td>${item.codigo || "--"}</td>
+          <td>${item.nome || "--"}</td>
+          <td><span class="status ${item.status_atual === "fora" ? "status-fora" : "status-dentro"}">${item.status_atual || "dentro"}</span></td>
+          <td>${sala ? `${sala.nome_local} - ${sala.nome_sala}` : "--"}</td>
+        </tr>
+      `).join("");
+    }
+
+    function carregarSalas() {
+      db.ref(`salas/${estado.uid}`).on("value", (snapshot) => {
+        const dados = snapshot.val() || {};
+        estado.salas = Object.entries(dados).map(([id, valor]) => ({ id, ...valor }));
+        renderSelectSalas();
+        renderTabelaSalas();
+      });
+    }
+
+    function carregarPatrimonios() {
+      db.ref("patrimonios").orderByChild("usuario_uid").equalTo(estado.uid).on("value", (snapshot) => {
+        const dados = snapshot.val() || {};
+        estado.patrimonios = Object.values(dados);
+        renderSelectPatrimonios();
+      });
+    }
+
+    function observarVinculosDaSala() {
+      const salaId = salaCadastrada.value;
+      if (!salaId) {
+        renderPatrimoniosDaSala({});
+        return;
+      }
+      db.ref(`salas_patrimonios/${estado.uid}/${salaId}`).on("value", (snapshot) => {
+        renderPatrimoniosDaSala(snapshot.val() || {});
+      });
+    }
+
+    formCriarSala.addEventListener("submit", async (event) => {
+      event.preventDefault();
+      const nomeLocal = document.getElementById("nome-local").value.trim();
+      const nomeSala = document.getElementById("sala-especifica").value.trim();
+      const limite = Number(document.getElementById("limite-sala").value || 0);
+
+      const salaRef = db.ref(`salas/${estado.uid}`).push();
+      await salaRef.set({
+        nome_local: nomeLocal,
+        nome_sala: nomeSala,
+        limite_cm: limite,
+        criado_em: Date.now()
+      });
+
+      msgSalaCriada.textContent = "Sala criada com sucesso.";
+      formCriarSala.reset();
+    });
+
+    formVincularSala.addEventListener("submit", async (event) => {
+      event.preventDefault();
+      const salaId = salaCadastrada.value;
+      const patrimonioId = patrimonioVinculo.value;
+      if (!salaId || !patrimonioId) {
+        msgVinculo.textContent = "Selecione sala e patrimônio.";
+        return;
+      }
+
+      const sala = estado.salas.find((item) => item.id === salaId);
+      await db.ref(`salas_patrimonios/${estado.uid}/${salaId}/${patrimonioId}`).set(true);
+      await db.ref(`patrimonios/${patrimonioId}`).update({
+        localizacao_padrao: sala ? `${sala.nome_local} - ${sala.nome_sala}` : "--",
+        localizacao_atual: sala ? `${sala.nome_local} - ${sala.nome_sala}` : "--",
+        atualizado_em: Date.now()
+      });
+
+      msgVinculo.textContent = "Patrimônio vinculado com sucesso.";
+      observarVinculosDaSala();
+    });
+
+    salaCadastrada.addEventListener("change", observarVinculosDaSala);
+    buscarSalaInput.addEventListener("input", renderTabelaSalas);
+
+    btnExcluirSala.addEventListener("click", async () => {
+      const salaId = salaCadastrada.value;
+      if (!salaId) return;
+      await db.ref(`salas/${estado.uid}/${salaId}`).remove();
+      await db.ref(`salas_patrimonios/${estado.uid}/${salaId}`).remove();
+      msgVinculo.textContent = "Sala excluída com sucesso.";
+      observarVinculosDaSala();
+    });
+
+    async function iniciar() {
+      await auth.signInAnonymously();
+      estado.uid = auth.currentUser.uid;
+      carregarSalas();
+      carregarPatrimonios();
+      observarVinculosDaSala();
+    }
+
+    iniciar();
   </script>
 </body>
 </html>

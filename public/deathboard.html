@@ -1,0 +1,70 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>DeathBoard</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+
+<body>
+    <header class="topo">
+    <div class="logo-texto">
+    <span class="logo-destaque">Proteção</span> Patrimonial RFID
+    </div>
+
+     <nav class="menu">
+      <a href="Deathboard" class = "ativo">Deathboard</a>
+      <a href="Patrimônios.html" >Patrimônios</a>
+      <a href="historico.html">Histórico</a>
+      <a href="salas-vinculadas.html">Salas Vinculadas</a>
+      <a href="monitoramento-ultrassonico.html">Monitoramento</a>
+     </nav>
+
+     <main class="salas-layout">
+
+    <section class="card sala-card">
+      <h2>Cadastrar local e sala</h2>
+      <p class="sala-subtitulo">
+        Crie os ambientes para organizar os patrimônios por local e sala.
+      </p>
+
+      <form class="form-sala">
+        <div class="campo">
+          <label for="tag-UID">Ultima Teg UID Lida</label>
+          <input type="text" id="tag-UID" tag="tag-UID" placeholder="Ex: Bloco Administrativo">
+        </div>
+
+        <div class="campo">
+          <label for="sala-especifica">Sala específica</label>
+          <input type="text" id="sala-especifica" name="sala-especifica" placeholder="Ex: Sala 01">
+        </div>
+
+        <div class="campo">
+          <label for="limite-sala">Limite da sala (em cm)</label>
+          <input
+            type="number"
+            id="limite-sala"
+            name="limite-sala"
+            placeholder="Ex: 300"
+            min="1"
+          >
+          <small>Informe a distância máxima para considerar que o patrimônio está dentro da sala.</small>
+        </div>
+
+        <div class="botoes">
+          <button type="submit" class="btn btn-primario">Criar sala</button>
+        </div>
+      </form>
+    </section>
+
+    
+  </header>
+
+
+
+
+</body>
+
+</html>
