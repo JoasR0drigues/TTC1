@@ -64,6 +64,23 @@
     </section>
   </main>
 
+  <section id="modal-detalhes-historico" class="card" style="display:none; position: fixed; inset: 8% 10%; z-index: 999; overflow-y: auto;">
+    <div class="botoes" style="justify-content: flex-end;">
+      <button type="button" class="btn btn-excluir" id="btn-fechar-detalhes-historico">Fechar</button>
+    </div>
+    <h2>Detalhes do patrimônio</h2>
+    <p><strong>Nome:</strong> <span id="detalhe-historico-nome">--</span></p>
+    <p><strong>Código:</strong> <span id="detalhe-historico-codigo">--</span></p>
+    <p><strong>Categoria:</strong> <span id="detalhe-historico-categoria">--</span></p>
+    <p><strong>UID:</strong> <span id="detalhe-historico-uid">--</span></p>
+    <p><strong>Status:</strong> <span id="detalhe-historico-status">--</span></p>
+    <p><strong>Descrição:</strong> <span id="detalhe-historico-descricao">--</span></p>
+    <p><strong>Localização:</strong> <span id="detalhe-historico-localizacao">--</span></p>
+    <div style="margin-top: 12px;">
+      <img id="detalhe-historico-foto" alt="Foto do patrimônio" style="width:100%; max-height:480px; object-fit:contain; border-radius:12px; border:1px solid #ddd6f3; background:#fff;">
+    </div>
+  </section>
+
   <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-database-compat.js"></script>
@@ -78,7 +95,18 @@
     const buscaHistorico = document.getElementById("busca-historico");
     const btnLimpar = document.querySelector(".btn-limpar");
     const historicoBody = document.getElementById("historico-body");
+    const modalDetalhesHistorico = document.getElementById("modal-detalhes-historico");
+    const btnFecharDetalhesHistorico = document.getElementById("btn-fechar-detalhes-historico");
+    const detalheHistoricoNome = document.getElementById("detalhe-historico-nome");
+    const detalheHistoricoCodigo = document.getElementById("detalhe-historico-codigo");
+    const detalheHistoricoCategoria = document.getElementById("detalhe-historico-categoria");
+    const detalheHistoricoUid = document.getElementById("detalhe-historico-uid");
+    const detalheHistoricoStatus = document.getElementById("detalhe-historico-status");
+    const detalheHistoricoDescricao = document.getElementById("detalhe-historico-descricao");
+    const detalheHistoricoLocalizacao = document.getElementById("detalhe-historico-localizacao");
+    const detalheHistoricoFoto = document.getElementById("detalhe-historico-foto");
     let historicoCompleto = [];
+    let patrimoniosCache = [];
 
     function formatarDataHora(valor) {
       const numero = Number(valor || 0);
@@ -117,11 +145,47 @@
           <td>${item.uid || "--"}</td>
           <td>${item.confirmadoPor || "--"}</td>
           <td>${item.localizacao || "--"}</td>
-          <td>${sessao?.role === "admin"
-            ? `<button type="button" class="btn btn-excluir btn-excluir-historico" data-id="${item.id || ""}" data-origem="${item.origem || ""}">Excluir</button>`
-            : "--"}</td>
+          <td>
+            <div class="acoes-tabela">
+              <button type="button" class="btn btn-editar btn-detalhes-historico" data-uid="${item.uid || ""}" data-patrimonio="${item.patrimonio || ""}" data-localizacao="${item.localizacao || ""}">Detalhes</button>
+              ${sessao?.role === "admin"
+                ? `<button type="button" class="btn btn-excluir btn-excluir-historico" data-id="${item.id || ""}" data-origem="${item.origem || ""}">Excluir</button>`
+                : ""}
+            </div>
+          </td>
         </tr>
       `).join("");
+    }
+
+    function normalizarTag(uid) {
+      return String(uid || "").replace(/\s+/g, "").toUpperCase();
+    }
+
+    function formatarTag(uid) {
+      const limpa = normalizarTag(uid);
+      return limpa ? limpa.replace(/(.{2})(?=.)/g, "$1 ").trim() : "--";
+    }
+
+    function buscarPatrimonioDetalhe(uid, nomeBase) {
+      const uidNormalizada = normalizarTag(uid);
+      return patrimoniosCache.find((item) => normalizarTag(item.uid_tag) === uidNormalizada)
+        || patrimoniosCache.find((item) => String(item.nome || "").toLowerCase() === String(nomeBase || "").toLowerCase())
+        || null;
+    }
+
+    function abrirDetalhesHistorico(uid, patrimonioNome, localizacao) {
+      const patrimonio = buscarPatrimonioDetalhe(uid, patrimonioNome);
+
+      detalheHistoricoNome.textContent = patrimonio?.nome || patrimonioNome || "--";
+      detalheHistoricoCodigo.textContent = patrimonio?.codigo || "--";
+      detalheHistoricoCategoria.textContent = patrimonio?.categoria || "--";
+      detalheHistoricoUid.textContent = formatarTag(uid);
+      detalheHistoricoStatus.textContent = patrimonio?.status_atual || "--";
+      detalheHistoricoDescricao.textContent = patrimonio?.descricao || "--";
+      detalheHistoricoLocalizacao.textContent = patrimonio?.localizacao_atual || localizacao || "--";
+      detalheHistoricoFoto.src = patrimonio?.foto_data_url || "";
+      detalheHistoricoFoto.style.display = patrimonio?.foto_data_url ? "block" : "none";
+      modalDetalhesHistorico.style.display = "block";
     }
 
     function aplicarFiltro() {
@@ -180,6 +244,10 @@
     async function iniciar() {
       try {
         await auth.signInAnonymously();
+        db.ref("patrimonios").on("value", (snapshotPatrimonios) => {
+          const patrimonios = snapshotPatrimonios.val() || {};
+          patrimoniosCache = Object.values(patrimonios);
+        });
         db.ref("acessos").on("value", (snapshotAcessos) => {
           db.ref("movimentacoes").once("value").then((snapshotMov) => {
             carregarHistorico(snapshotAcessos, snapshotMov);
@@ -204,12 +272,24 @@
     historicoBody.addEventListener("click", async (event) => {
       const alvo = event.target;
       if (!(alvo instanceof HTMLElement)) return;
-      if (!alvo.classList.contains("btn-excluir-historico")) return;
-      const id = alvo.getAttribute("data-id") || "";
-      const origem = alvo.getAttribute("data-origem") || "";
-      const confirmou = window.confirm("Deseja realmente excluir este registro do histórico?");
-      if (!confirmou) return;
-      await excluirRegistroHistorico(id, origem);
+      if (alvo.classList.contains("btn-detalhes-historico")) {
+        const uid = alvo.getAttribute("data-uid") || "";
+        const patrimonio = alvo.getAttribute("data-patrimonio") || "";
+        const localizacao = alvo.getAttribute("data-localizacao") || "";
+        abrirDetalhesHistorico(uid, patrimonio, localizacao);
+        return;
+      }
+      if (alvo.classList.contains("btn-excluir-historico")) {
+        const id = alvo.getAttribute("data-id") || "";
+        const origem = alvo.getAttribute("data-origem") || "";
+        const confirmou = window.confirm("Deseja realmente excluir este registro do histórico?");
+        if (!confirmou) return;
+        await excluirRegistroHistorico(id, origem);
+      }
+    });
+
+    btnFecharDetalhesHistorico.addEventListener("click", () => {
+      modalDetalhesHistorico.style.display = "none";
     });
 
     iniciar();

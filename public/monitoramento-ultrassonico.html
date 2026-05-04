@@ -60,7 +60,6 @@
       <div class="leitura-atual">
         <p><strong>Sala monitorada:</strong> <span id="leitura-sala">--</span></p>
         <p><strong>Patrimônio detectado:</strong> <span id="leitura-patrimonio">--</span></p>
-        <p><strong>UID:</strong> <span id="leitura-uid">--</span></p>
         <p><strong>Distância atual:</strong> <span id="leitura-distancia">--</span></p>
         <p><strong>Limite da sala:</strong> <span id="leitura-limite">--</span></p>
         <p><strong>Status:</strong> <span id="leitura-status">--</span></p>
@@ -69,54 +68,7 @@
       </div>
     </section>
 
-    <section class="card" style="grid-column: 1 / -1;">
-      <h2>Patrimônios monitorados em tempo real</h2>
-
-      <div class="tabela-wrapper">
-        <table>
-          <thead>
-            <tr>
-              <th>Sala vinculada</th>
-              <th>Patrimônio</th>
-              <th>Código</th>
-              <th>UID</th>
-              <th>Limite da sala</th>
-              <th>Distância atual</th>
-              <th>Status</th>
-              <th>Última leitura</th>
-              <th>Atualizado em</th>
-              <th data-role-required="admin">Ações</th>
-            </tr>
-          </thead>
-          <tbody id="tabela-monitoramento-body">
-            <tr>
-              <td colspan="10" class="tabela-vazia">
-                Nenhum patrimônio monitorado no momento.
-              </td>
-            </tr>
-          </tbody>
-        </table>
-      </div>
-    </section>
-
   </main>
-
-  <section id="modal-detalhes-monitorado" class="card" style="display:none; position: fixed; inset: 8% 10%; z-index: 999; overflow-y: auto;">
-    <div class="botoes" style="justify-content: flex-end;">
-      <button type="button" class="btn btn-excluir" id="btn-fechar-detalhes-monitorado">Fechar</button>
-    </div>
-    <h2>Detalhes do patrimônio monitorado</h2>
-    <p><strong>Código:</strong> <span id="detalhe-monitorado-codigo">--</span></p>
-    <p><strong>Nome:</strong> <span id="detalhe-monitorado-nome">--</span></p>
-    <p><strong>Categoria:</strong> <span id="detalhe-monitorado-categoria">--</span></p>
-    <p><strong>UID:</strong> <span id="detalhe-monitorado-tag">--</span></p>
-    <p><strong>Status:</strong> <span id="detalhe-monitorado-status">--</span></p>
-    <p><strong>Descrição:</strong> <span id="detalhe-monitorado-descricao">--</span></p>
-    <p><strong>Localização:</strong> <span id="detalhe-monitorado-localizacao">--</span></p>
-    <div style="margin-top: 12px;">
-      <img id="detalhe-monitorado-foto" alt="Foto do patrimônio monitorado" style="width:100%; max-height:480px; object-fit:contain; border-radius:12px; border:1px solid #ddd6f3; background:#fff;">
-    </div>
-  </section>
 
   <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
@@ -129,26 +81,14 @@
     const salaMonitorada = document.getElementById("sala-monitorada");
     const limiteSalaMonitorada = document.getElementById("limite-sala-monitorada");
     const formMonitoramentoSala = document.getElementById("form-monitoramento-sala");
-    const tabelaMonitoramentoBody = document.getElementById("tabela-monitoramento-body");
 
     const leituraSala = document.getElementById("leitura-sala");
     const leituraPatrimonio = document.getElementById("leitura-patrimonio");
-    const leituraUid = document.getElementById("leitura-uid");
     const leituraDistancia = document.getElementById("leitura-distancia");
     const leituraLimite = document.getElementById("leitura-limite");
     const leituraStatus = document.getElementById("leitura-status");
     const leituraAtualizacao = document.getElementById("leitura-atualizacao");
     const leituraAlerta = document.getElementById("leitura-alerta");
-    const modalDetalhesMonitorado = document.getElementById("modal-detalhes-monitorado");
-    const btnFecharDetalhesMonitorado = document.getElementById("btn-fechar-detalhes-monitorado");
-    const detalheMonitoradoCodigo = document.getElementById("detalhe-monitorado-codigo");
-    const detalheMonitoradoNome = document.getElementById("detalhe-monitorado-nome");
-    const detalheMonitoradoCategoria = document.getElementById("detalhe-monitorado-categoria");
-    const detalheMonitoradoTag = document.getElementById("detalhe-monitorado-tag");
-    const detalheMonitoradoStatus = document.getElementById("detalhe-monitorado-status");
-    const detalheMonitoradoDescricao = document.getElementById("detalhe-monitorado-descricao");
-    const detalheMonitoradoLocalizacao = document.getElementById("detalhe-monitorado-localizacao");
-    const detalheMonitoradoFoto = document.getElementById("detalhe-monitorado-foto");
 
     firebase.initializeApp(window.firebaseConfig);
     const db = firebase.database();
@@ -160,7 +100,8 @@
       firebaseUid: "",
       salas: [],
       patrimonios: [],
-      ultimaLeituraRFID: null
+      ultimaLeituraRFID: null,
+      tagsPatrimonio: {}
     };
 
     function formatarAgora() {
@@ -178,11 +119,22 @@
       return "--";
     }
 
+    function resolvePatrimonioCampos(leitura) {
+      const uidNormalizada = String(leitura?.uid || "").replace(/\s+/g, "").toUpperCase();
+      const patrimonioResolvido = buscarPatrimonioPorUid(leitura?.uid || "");
+      const tagResolvida = estado.tagsPatrimonio[uidNormalizada] || {};
+
+      return {
+        nome: leitura?.patrimonio_nome || patrimonioResolvido?.nome || tagResolvida.patrimonio_nome || "--",
+        codigo: leitura?.patrimonio_codigo || patrimonioResolvido?.codigo || tagResolvida.patrimonio_codigo || "--"
+      };
+    }
+
     function atualizarPainelComLeitura(leitura) {
       const distanciaNumero = Number(leitura?.distancia || 0);
-      const patrimonioResolvido = buscarPatrimonioPorUid(leitura?.uid || "");
-      const patrimonioNome = leitura?.patrimonio_nome || patrimonioResolvido?.nome || "--";
-      const patrimonioCodigo = leitura?.patrimonio_codigo || patrimonioResolvido?.codigo || "--";
+      const camposPatrimonio = resolvePatrimonioCampos(leitura);
+      const patrimonioNome = camposPatrimonio.nome;
+      const patrimonioCodigo = camposPatrimonio.codigo;
       const limite = Number(estado.monitoramentoSala?.limite || 0);
       const salaNome = formatarNomeSala(estado.monitoramentoSala?.sala || "");
       const statusDentro = limite > 0 ? distanciaNumero <= limite : false;
@@ -191,8 +143,7 @@
         : "Sem limite configurado";
 
       leituraSala.textContent = salaNome;
-      leituraPatrimonio.textContent = patrimonioNome;
-      leituraUid.textContent = formatarTag(leitura?.uid);
+      leituraPatrimonio.textContent = statusDentro ? "Patrimônio detectado" : "Patrimônio não detectado";
       leituraDistancia.textContent = `${distanciaNumero.toFixed(1)} cm`;
       leituraLimite.textContent = limite > 0 ? `${limite} cm` : "--";
       leituraStatus.textContent = statusTexto;
@@ -202,26 +153,6 @@
       if (!statusDentro && limite > 0) {
         leituraAlerta.textContent = `${formatarAgora()} - Distância acima do limite`;
       }
-
-      const classeStatus = statusDentro ? "status-dentro" : "status-fora";
-      const labelStatus = statusDentro ? "Dentro da sala" : "Fora do limite";
-      const colunaAcao = sessao?.role === "admin"
-        ? `<td data-role-required="admin"><div class="acoes-tabela"><button type="button" class="btn btn-editar btn-detalhes-monitorado" data-uid="${leitura?.uid || ""}">Detalhes</button><button type="button" class="btn btn-excluir btn-excluir-monitorado" data-uid="${leitura?.uid || ""}">Excluir</button></div></td>`
-        : "";
-      tabelaMonitoramentoBody.innerHTML = `
-        <tr>
-          <td>${salaNome}</td>
-          <td>${patrimonioNome}</td>
-          <td>${patrimonioCodigo}</td>
-          <td>${formatarTag(leitura?.uid)}</td>
-          <td>${limite > 0 ? `${limite} cm` : "--"}</td>
-          <td>${distanciaNumero.toFixed(1)} cm</td>
-          <td><span class="status ${classeStatus}">${labelStatus}</span></td>
-          <td>${distanciaNumero.toFixed(1)} cm</td>
-          <td>${formatarAgora()}</td>
-          ${colunaAcao}
-        </tr>
-      `;
     }
 
     async function garantirUsuarioFirebase() {
@@ -324,34 +255,27 @@
     }
 
     function carregarPatrimoniosMonitoramento() {
-      db.ref("patrimonios").orderByChild("usuario_uid").equalTo(estado.firebaseUid).on("value", (snapshot) => {
+      db.ref("patrimonios").on("value", (snapshot) => {
         const dados = snapshot.val() || {};
         estado.patrimonios = Object.values(dados);
+      });
+    }
+
+    function carregarTagsPatrimonio() {
+      db.ref("tags_patrimonio").on("value", (snapshot) => {
+        const dados = snapshot.val() || {};
+        const mapa = {};
+        Object.entries(dados).forEach(([uid, info]) => {
+          const chave = String(uid || "").replace(/\s+/g, "").toUpperCase();
+          mapa[chave] = info || {};
+        });
+        estado.tagsPatrimonio = mapa;
       });
     }
 
     function buscarPatrimonioPorUid(uid) {
       const uidNormalizada = String(uid || "").replace(/\s+/g, "").toUpperCase();
       return estado.patrimonios.find((item) => String(item.uid_tag || "").replace(/\s+/g, "").toUpperCase() === uidNormalizada) || null;
-    }
-
-    function abrirDetalhesMonitorado(uid) {
-      const patrimonio = buscarPatrimonioPorUid(uid);
-      if (!patrimonio) {
-        leituraAlerta.textContent = "Nenhum patrimônio encontrado para esta UID.";
-        return;
-      }
-
-      detalheMonitoradoCodigo.textContent = patrimonio.codigo || "--";
-      detalheMonitoradoNome.textContent = patrimonio.nome || "--";
-      detalheMonitoradoCategoria.textContent = patrimonio.categoria || "--";
-      detalheMonitoradoTag.textContent = formatarTag(patrimonio.uid_tag || "");
-      detalheMonitoradoStatus.textContent = patrimonio.status_atual || "--";
-      detalheMonitoradoDescricao.textContent = patrimonio.descricao || "--";
-      detalheMonitoradoLocalizacao.textContent = patrimonio.localizacao_atual || "--";
-      detalheMonitoradoFoto.src = patrimonio.foto_data_url || "";
-      detalheMonitoradoFoto.style.display = patrimonio.foto_data_url ? "block" : "none";
-      modalDetalhesMonitorado.style.display = "block";
     }
 
     if (salaMonitorada) {
@@ -369,40 +293,12 @@
       });
     }
 
-    tabelaMonitoramentoBody.addEventListener("click", async (event) => {
-      const alvo = event.target;
-      if (!(alvo instanceof HTMLElement)) return;
-      if (alvo.classList.contains("btn-detalhes-monitorado")) {
-        const uid = alvo.getAttribute("data-uid") || "";
-        abrirDetalhesMonitorado(uid);
-        return;
-      }
-      if (!alvo.classList.contains("btn-excluir-monitorado")) return;
-      const uid = alvo.getAttribute("data-uid") || "";
-      const confirmou = window.confirm("Deseja remover este patrimônio do monitoramento da sala?");
-      if (!confirmou) return;
-      const patrimonio = buscarPatrimonioPorUid(uid);
-      const salaId = estado.monitoramentoSala?.sala || "";
-      if (!patrimonio?.id || !salaId) return;
-
-      await db.ref(`salas_patrimonios/${estado.firebaseUid}/${salaId}/${patrimonio.id}`).remove();
-      await db.ref(`patrimonios/${patrimonio.id}`).update({
-        localizacao_atual: "--",
-        sala_id_atual: "",
-        atualizado_em: Date.now()
-      });
-      leituraAlerta.textContent = "Patrimônio removido do monitoramento da sala.";
-    });
-
-    btnFecharDetalhesMonitorado.addEventListener("click", () => {
-      modalDetalhesMonitorado.style.display = "none";
-    });
-
     async function iniciar() {
       try {
         await garantirUsuarioFirebase();
         carregarSalasMonitoramento();
         carregarPatrimoniosMonitoramento();
+        carregarTagsPatrimonio();
         observarUltimaLeituraRFID();
         observarLeiturasUltrassonico();
       } catch (erro) {

@@ -43,7 +43,7 @@
         <button type="submit" class="btn btn-primario">Entrar</button>
         <a href="criarconta.html" class="btn btn-secundario">Criar conta</a>
         </div>
-       
+        <p id="login-msg"></p>
       </form>
     </section>
 
@@ -72,13 +72,17 @@
 
       const resultado = AuthApp.login(email, senha, tag);
       if (!resultado.ok) {
-        loginMsg.textContent = resultado.mensagem;
-        loginMsg.style.color = "#9b3f4d";
+        if (loginMsg) {
+          loginMsg.textContent = resultado.mensagem;
+          loginMsg.style.color = "#9b3f4d";
+        }
         return;
       }
 
-      loginMsg.textContent = "Login realizado com sucesso.";
-      loginMsg.style.color = "#2f6b4f";
+      if (loginMsg) {
+        loginMsg.textContent = "Login realizado com sucesso.";
+        loginMsg.style.color = "#2f6b4f";
+      }
       window.location.href = resultado.user.role === "admin" ? "Patrimônios.html" : "historico.html";
     });
   </script>

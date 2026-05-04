@@ -198,9 +198,11 @@ void loop() {
   if (firebaseOK && millis() - ultimoEnvioUltrassonico >= INTERVALO_ENVIO_ULTRASSONICO) {
     ultimoEnvioUltrassonico = millis();
     StaticJsonDocument<256> ultraDoc;
-    ultraDoc["uid"] = "SENSOR_ULTRASSONICO";
+    ultraDoc["uid"] = ultimoUID.length() > 0 ? ultimoUID : "SENSOR_ULTRASSONICO";
     ultraDoc["uid_key"] = "SENSOR_ULTRASSONICO";
     ultraDoc["tipo_tag"] = "ultrassonico";
+    ultraDoc["patrimonio_nome"] = ultimoPatrimonioNome;
+    ultraDoc["patrimonio_codigo"] = ultimoPatrimonioCodigo;
     ultraDoc["distancia"] = distancia;
     ultraDoc["objeto_detectado"] = objetoDetectado;
     ultraDoc["timestamp"] = obterTimestamp();
