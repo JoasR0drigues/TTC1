@@ -149,6 +149,34 @@ main,
   background: linear-gradient(90deg, var(--primary), #b8a7e8);
 }
 
+.hero-imagem {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.card-logo {
+  width: 100%;
+  max-width: 420px;
+  min-height: 300px;
+  padding: 18px;
+  border-radius: 16px;
+  border: 1px solid var(--border);
+  background: #ffffff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: var(--shadow);
+}
+
+.card-logo img {
+  width: 100%;
+  max-width: 340px;
+  max-height: 240px;
+  object-fit: contain;
+  display: block;
+}
+
 h1,
 h2 {
   margin-top: 0;
