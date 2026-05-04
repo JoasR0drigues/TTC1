@@ -69,10 +69,7 @@
           <input type="text" id="tag_rfid" name="tag_rfid" placeholder="Ex: A1 B2 C3 D4" required>
         </div>
 
-        <div class="campo">
-          <label for="limite">Limitedo do Ultrassônico</label>
-          <input type="text" id="limite" name="limite" placeholder="Ex: 100cm" required>
-        </div>
+        
 
         <div class="campo">
           <label for="descricao">Descrição</label>
@@ -183,17 +180,20 @@
       return limpa.replace(/(.{2})(?=.)/g, "$1 ").trim() || "--";
     }
 
-    function formatarDataHoraAgora() {
-      return new Date().toLocaleString("pt-BR");
+    function formatarHoraLeitura(timestamp) {
+      const bruto = Number(timestamp || 0);
+      if (!bruto) return "--";
+      const emMilissegundos = bruto < 1000000000000 ? bruto * 1000 : bruto;
+      return new Date(emMilissegundos).toLocaleTimeString("pt-BR");
     }
 
     function atualizarCardLeitura(leitura) {
       refs.uidLida.textContent = formatarTag(leitura?.uid);
-      refs.leituraTipo.textContent = leitura?.tipo || "--";
+      refs.leituraTipo.textContent = formatarTag(leitura?.uid);
       refs.leituraPatrimonio.textContent = leitura?.patrimonioNome || "Nenhum patrimônio identificado";
       refs.leituraCodigo.textContent = leitura?.patrimonioCodigo || "--";
       refs.leituraStatus.textContent = leitura?.status || "--";
-      refs.leituraHorario.textContent = formatarDataHoraAgora();
+      refs.leituraHorario.textContent = formatarHoraLeitura(leitura?.timestamp);
     }
 
     async function garantirUsuarioFirebase() {
@@ -236,7 +236,9 @@
             <td>
               <div class="acoes-tabela">
                 <button type="button" class="btn btn-editar btn-detalhes-patrimonio" data-id="${item.id || ""}">Detalhes</button>
-                <button type="button" class="btn btn-excluir btn-excluir-patrimonio" data-id="${item.id || ""}" data-tag="${item.uid_tag || ""}">Excluir</button>
+                ${sessao?.role === "admin"
+                  ? `<button type="button" class="btn btn-excluir btn-excluir-patrimonio" data-id="${item.id || ""}" data-tag="${item.uid_tag || ""}">Excluir</button>`
+                  : ""}
               </div>
             </td>
           </tr>
@@ -280,6 +282,10 @@
 
           Object.values(leituras).forEach((item) => {
             if (!item) return;
+            const uid = String(item.uid || item.uid_tag || "");
+            const ehUltrassonico = uid.toUpperCase() === "SENSOR_ULTRASSONICO"
+              || String(item.tipo_tag || "").toLowerCase() === "ultrassonico";
+            if (ehUltrassonico) return;
             if (!ultimaLeitura || Number(item.timestamp || 0) > Number(ultimaLeitura.timestamp || 0)) {
               ultimaLeitura = item;
             }
@@ -289,13 +295,18 @@
 
           const uidLido = ultimaLeitura.uid || ultimaLeitura.uid_tag || "";
           const patrimonioLocal = buscarPatrimonioPorTag(uidLido);
+          const tipoTagOriginal = String(ultimaLeitura.tipo_tag || "").toLowerCase();
+          const tipoLeitura = patrimonioLocal
+            ? "patrimonio"
+            : (tipoTagOriginal && tipoTagOriginal !== "ultrassonico" ? tipoTagOriginal : "desconhecida");
 
           atualizarCardLeitura({
             uid: uidLido,
-            tipo: ultimaLeitura.tipo_tag || "desconhecida",
+            tipo: tipoLeitura,
             patrimonioNome: ultimaLeitura.patrimonio_nome || patrimonioLocal?.nome || "Nenhum patrimônio identificado",
             patrimonioCodigo: ultimaLeitura.patrimonio_codigo || patrimonioLocal?.codigo || "--",
-            status: ultimaLeitura.objeto_detectado ? "detectado" : "aguardando"
+            status: ultimaLeitura.objeto_detectado ? "detectado" : "aguardando",
+            timestamp: Number(ultimaLeitura.timestamp || Date.now())
           });
 
           if (sessao?.role === "admin" && refs.tagRfidInput) {
@@ -378,7 +389,8 @@
           tipo: "patrimonio",
           patrimonioNome: novoPatrimonio.nome,
           patrimonioCodigo: novoPatrimonio.codigo,
-          status: "cadastrado"
+          status: "cadastrado",
+          timestamp: Date.now()
         });
         refs.movimentacaoMsg.textContent = "Patrimônio salvo no Firebase com sucesso.";
       } catch (erro) {
@@ -433,7 +445,8 @@
           tipo: "movimentacao",
           patrimonioNome: patrimonio.nome,
           patrimonioCodigo: patrimonio.codigo,
-          status: tipo === "entrada" ? "entrada confirmada" : "saida confirmada"
+          status: tipo === "entrada" ? "entrada confirmada" : "saida confirmada",
+          timestamp: Date.now()
         });
         refs.movimentacaoMsg.textContent = `Movimentação de ${tipo} salva no Firebase.`;
       } catch (erro) {
@@ -459,6 +472,10 @@
 
     async function excluirPatrimonio(patrimonioId, uidTag) {
       if (!patrimonioId) return;
+      if (sessao?.role !== "admin") {
+        refs.movimentacaoMsg.textContent = "Somente administradores podem excluir patrimônios.";
+        return;
+      }
       try {
         const updates = {};
         updates[`patrimonios/${patrimonioId}`] = null;
@@ -507,6 +524,7 @@
         const patrimonioId = alvo.getAttribute("data-id") || "";
         abrirDetalhesPatrimonio(patrimonioId);
       } else if (alvo.classList.contains("btn-excluir-patrimonio")) {
+        if (sessao?.role !== "admin") return;
         const patrimonioId = alvo.getAttribute("data-id") || "";
         const uidTag = alvo.getAttribute("data-tag") || "";
         const confirmou = window.confirm("Deseja realmente excluir este patrimônio?");
