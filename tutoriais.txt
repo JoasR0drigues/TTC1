@@ -34,3 +34,9 @@ npx cap add android
 npx cap sync
 npx cap open android
 
+
+
+||||||||||||||TESTE LOCAL||||||||||||||||||||||||||||||
+npm run deploy:all
+npm run dev
+

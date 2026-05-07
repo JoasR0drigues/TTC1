@@ -201,6 +201,20 @@ label {
   color: var(--text);
 }
 
+.asterisco-erro {
+  display: none;
+  color: #d32f2f;
+  font-weight: 700;
+  margin-left: 4px;
+}
+
+.asterisco-obrigatorio {
+  display: inline;
+  color: #d32f2f;
+  font-weight: 700;
+  margin-left: 4px;
+}
+
 input,
 select,
 textarea,
@@ -471,4 +485,5 @@ tr:hover td {
     width: 56px;
     height: 56px;
   }
+
 }

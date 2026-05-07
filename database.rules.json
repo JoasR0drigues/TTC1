@@ -71,15 +71,17 @@
 
     "leituras_recentes": {
       ".indexOn": ["timestamp"],
+      ".read": true,
       "$leituraId": {
-        ".read": "auth != null",
+        ".read": true,
         ".write": "(auth != null && newData.child('usuario_uid').val() === auth.uid) || (auth == null && newData.hasChildren(['uid', 'timestamp']))"
       }
     },
 
     "acessos": {
+      ".read": true,
       "$acessoId": {
-        ".read": "auth != null",
+        ".read": true,
         ".write": "(auth != null && newData.child('usuario_uid').val() === auth.uid) || (auth == null && newData.hasChildren(['uid', 'timestamp']))"
       }
     },

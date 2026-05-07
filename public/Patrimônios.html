@@ -13,11 +13,10 @@
     </div>
 
     <nav class="menu">
-      
-      <a href="Patrimônios.html" class="ativo">Patrimônios</a>
-      <a href="historico.html">Histórico</a>
-      <a href="salas-vinculadas.html">Salas Vinculadas</a>
-      <a href="monitoramento-ultrassonico.html">Monitoramento</a>
+    <a href="salas-vinculadas.html">Salas Vinculadas</a>
+    <a href="Patrimônios.html" class="ativo">Patrimônios</a>
+    <a href="historico.html">Histórico</a>
+    <a href="monitoramento-ultrassonico.html">Monitoramento</a>
     </nav>
   </header>
 
@@ -50,22 +49,22 @@
       <h2>Cadastrar patrimônio</h2>
       <form class="form-patrimonio" id="form-patrimonio">
         <div class="campo">
-          <label for="codigo">Código do patrimônio</label>
+          <label for="codigo">Código do patrimônio <span class="asterisco-obrigatorio">*</span></label>
           <input type="text" id="codigo" name="codigo" placeholder="Ex: PATRI-001" required>
         </div>
 
         <div class="campo">
-          <label for="nome_objeto">Nome do objeto</label>
+          <label for="nome_objeto">Nome do objeto <span class="asterisco-obrigatorio">*</span></label>
           <input type="text" id="nome_objeto" name="nome_objeto" placeholder="Ex: Mesa-001" required>
         </div>
 
         <div class="campo">
-          <label for="categoria">Categoria</label>
-          <input type="text" id="categoria" name="categoria" placeholder="Ex:MÓVEL">
+          <label for="categoria">Categoria <span class="asterisco-obrigatorio">*</span></label>
+          <input type="text" id="categoria" name="categoria" placeholder="Ex:MÓVEL" required>
         </div>
 
         <div class="campo">
-          <label for="tag_rfid">Tag RFID do objeto</label>
+          <label for="tag_rfid">Tag RFID do objeto <span class="asterisco-obrigatorio">*</span></label>
           <input type="text" id="tag_rfid" name="tag_rfid" placeholder="Ex: A1 B2 C3 D4" required>
         </div>
 
@@ -140,6 +139,8 @@
       firebaseUid: "",
       patrimonios: []
     };
+    const FIREBASE_UID_FALLBACK_KEY = "firebaseUidFallback";
+    const FIREBASE_DB_BASE_URL = String((window.firebaseConfig && window.firebaseConfig.databaseURL) || "").replace(/\/+$/, "");
 
     const refs = {
       uidLida: document.getElementById("uid-lida"),
@@ -150,6 +151,7 @@
       leituraStatus: document.getElementById("leitura-status"),
       tagRfidInput: document.getElementById("tag_rfid"),
       tagMovInput: document.getElementById("tag-movimentacao"),
+      categoriaInput: document.getElementById("categoria"),
       btnEntrando: document.getElementById("btn-entrando"),
       btnSaindo: document.getElementById("btn-saindo"),
       movimentacaoMsg: document.getElementById("movimentacao-msg"),
@@ -170,6 +172,12 @@
     firebase.initializeApp(window.firebaseConfig);
     const db = firebase.database();
     const auth = firebase.auth();
+    const camposObrigatoriosPatrimonio = [
+      document.getElementById("codigo"),
+      document.getElementById("nome_objeto"),
+      refs.categoriaInput,
+      refs.tagRfidInput
+    ];
 
     function normalizarTag(tag) {
       return String(tag || "").trim().replace(/\s+/g, "").toUpperCase();
@@ -197,10 +205,33 @@
     }
 
     async function garantirUsuarioFirebase() {
-      if (!auth.currentUser) {
-        await auth.signInAnonymously();
+      if (auth.currentUser && auth.currentUser.uid) {
+        estado.firebaseUid = auth.currentUser.uid;
+        localStorage.setItem(FIREBASE_UID_FALLBACK_KEY, estado.firebaseUid);
+        return estado.firebaseUid;
       }
-      estado.firebaseUid = auth.currentUser.uid;
+
+      try {
+        await auth.signInAnonymously();
+      } catch (erro) {
+        const uidSalva = localStorage.getItem(FIREBASE_UID_FALLBACK_KEY);
+        if (uidSalva) {
+          estado.firebaseUid = uidSalva;
+          return estado.firebaseUid;
+        }
+        const base = String(sessao?.email || "usuario_local")
+          .trim()
+          .toLowerCase()
+          .replace(/[^a-z0-9]/g, "_");
+        estado.firebaseUid = `local_${base || "usuario"}`;
+        localStorage.setItem(FIREBASE_UID_FALLBACK_KEY, estado.firebaseUid);
+        return estado.firebaseUid;
+      }
+
+      estado.firebaseUid = auth.currentUser?.uid || localStorage.getItem(FIREBASE_UID_FALLBACK_KEY) || "";
+      if (estado.firebaseUid) {
+        localStorage.setItem(FIREBASE_UID_FALLBACK_KEY, estado.firebaseUid);
+      }
       return estado.firebaseUid;
     }
 
@@ -315,7 +346,80 @@
           if (sessao?.role === "admin" && refs.tagMovInput) {
             refs.tagMovInput.value = formatarTag(uidLido);
           }
+        }, () => {
+          refs.movimentacaoMsg.textContent = "Realtime indisponível. Ativando leitura por atualização periódica.";
         });
+    }
+
+    function extrairUltimaLeituraRFID(leituras) {
+      const valores = Object.values(leituras || {});
+      let ultimaLeitura = null;
+
+      valores.forEach((item) => {
+        if (!item) return;
+        const uid = String(item.uid || item.uid_tag || "");
+        const ehUltrassonico = uid.toUpperCase() === "SENSOR_ULTRASSONICO"
+          || String(item.tipo_tag || "").toLowerCase() === "ultrassonico";
+        if (ehUltrassonico) return;
+        if (!ultimaLeitura || Number(item.timestamp || 0) > Number(ultimaLeitura.timestamp || 0)) {
+          ultimaLeitura = item;
+        }
+      });
+
+      return ultimaLeitura;
+    }
+
+    function montarCardDaLeitura(ultimaLeitura) {
+      if (!ultimaLeitura) return;
+      const uidLido = ultimaLeitura.uid || ultimaLeitura.uid_tag || "";
+      const patrimonioLocal = buscarPatrimonioPorTag(uidLido);
+      const tipoTagOriginal = String(ultimaLeitura.tipo_tag || "").toLowerCase();
+      const tipoLeitura = patrimonioLocal
+        ? "patrimonio"
+        : (tipoTagOriginal && tipoTagOriginal !== "ultrassonico" ? tipoTagOriginal : "desconhecida");
+
+      atualizarCardLeitura({
+        uid: uidLido,
+        tipo: tipoLeitura,
+        patrimonioNome: ultimaLeitura.patrimonio_nome || patrimonioLocal?.nome || "Nenhum patrimônio identificado",
+        patrimonioCodigo: ultimaLeitura.patrimonio_codigo || patrimonioLocal?.codigo || "--",
+        status: ultimaLeitura.objeto_detectado ? "detectado" : "aguardando",
+        timestamp: Number(ultimaLeitura.timestamp || Date.now())
+      });
+
+      if (sessao?.role === "admin" && refs.tagRfidInput) {
+        refs.tagRfidInput.value = formatarTag(uidLido);
+      }
+      if (sessao?.role === "admin" && refs.tagMovInput) {
+        refs.tagMovInput.value = formatarTag(uidLido);
+      }
+    }
+
+    async function atualizarLeituraPorPolling() {
+      if (!FIREBASE_DB_BASE_URL) return;
+      try {
+        const resposta = await fetch(`${FIREBASE_DB_BASE_URL}/leituras_recentes.json?ts=${Date.now()}`);
+        if (!resposta.ok) return;
+        const leituras = await resposta.json();
+        const ultimaLeitura = extrairUltimaLeituraRFID(leituras || {});
+        if (!ultimaLeitura) return;
+
+        montarCardDaLeitura(ultimaLeitura);
+      } catch (erro) {
+      }
+    }
+
+    async function atualizarLeituraPorAcessos() {
+      if (!FIREBASE_DB_BASE_URL) return;
+      try {
+        const resposta = await fetch(`${FIREBASE_DB_BASE_URL}/acessos.json?ts=${Date.now()}`);
+        if (!resposta.ok) return;
+        const acessos = await resposta.json();
+        const ultimaLeitura = extrairUltimaLeituraRFID(acessos || {});
+        if (!ultimaLeitura) return;
+        montarCardDaLeitura(ultimaLeitura);
+      } catch (erro) {
+      }
     }
 
     function buscarPatrimonioPorTag(uidTag) {
@@ -336,8 +440,21 @@
       });
     }
 
+    function validarCamposObrigatoriosPatrimonio() {
+      let temErro = false;
+      camposObrigatoriosPatrimonio.forEach((input) => {
+        const invalido = !String(input.value || "").trim() || !input.checkValidity();
+        if (invalido) temErro = true;
+      });
+      return !temErro;
+    }
+
     async function cadastrarPatrimonio(event) {
       event.preventDefault();
+      if (!validarCamposObrigatoriosPatrimonio()) {
+        refs.movimentacaoMsg.textContent = "Preencha os campos obrigatórios para salvar o patrimônio.";
+        return;
+      }
       try {
         const uidUsuario = await garantirUsuarioFirebase();
         const formData = new FormData(refs.formPatrimonio);
@@ -500,15 +617,18 @@
     }
 
     async function iniciar() {
+      await garantirUsuarioFirebase();
       try {
-        await garantirUsuarioFirebase();
         await registrarPerfilSistema();
-        observarPatrimonios();
-        observarLeiturasRFID();
-        refs.movimentacaoMsg.textContent = "";
       } catch (erro) {
-        refs.movimentacaoMsg.textContent = "Falha ao conectar com Firebase. Verifique as regras.";
+        refs.movimentacaoMsg.textContent = "Conectado em modo de leitura. Não foi possível registrar perfil.";
       }
+      observarPatrimonios();
+      observarLeiturasRFID();
+      setInterval(atualizarLeituraPorPolling, 2500);
+      setInterval(atualizarLeituraPorAcessos, 3200);
+      atualizarLeituraPorPolling();
+      atualizarLeituraPorAcessos();
     }
 
     if (sessao && sessao.role === "admin") {
@@ -535,6 +655,12 @@
 
     refs.btnFecharDetalhes.addEventListener("click", () => {
       refs.modalDetalhes.style.display = "none";
+    });
+
+    camposObrigatoriosPatrimonio.forEach((input) => {
+      input.addEventListener("input", () => {
+        refs.movimentacaoMsg.textContent = "";
+      });
     });
 
     renderTabela();

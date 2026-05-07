@@ -13,7 +13,7 @@
 
 // ================= FIREBASE =================
 // URL base do Realtime Database, sem .json no final
-#define FIREBASE_HOST "https://tcc-prototipo-de-patrimonio-default-rtdb.firebaseio.com"
+#define FIREBASE_HOST  "https://tcc-prototipo-de-patrimonio-default-rtdb.firebaseio.com"
 
 // ================= NTP =================
 #define NTP_SERVER "pool.ntp.org"
@@ -123,6 +123,7 @@ void setup() {
     Serial.print(".");
     tentativas++;
   }
+                                                                    //TENTATIVAS DE CONEXÃO COM WI-FI, SE CONCETAR ACENDE O LED
 
   if (WiFi.status() == WL_CONNECTED) {
     Serial.println("\nWiFi conectado! IP: " + WiFi.localIP().toString());
@@ -130,7 +131,8 @@ void setup() {
   } else {
     Serial.println("\nFalha ao conectar no WiFi");
   }
-
+  
+                                                                    //CONFIGURA A HORA
   configTime(GMT_OFFSET_SEC, DAYLIGHT_OFFSET_SEC, NTP_SERVER);
   Serial.print("Sincronizando hora");
   time_t now = time(nullptr);
@@ -148,10 +150,11 @@ void setup() {
   } else {
     Serial.println(" falhou, usando fallback.");
   }
-
+                                                                   //PREPARA CONEXÃO SEGURA
   secureClient.setInsecure();
   Serial.println("Firebase REST inicializado, aguardando teste...");
 
+                                                                   //INICIA AS FUNÇÕES DO RFID E CRIA PÁGINAS DO SERVIDOR WEB
   inicializarRFID();
 
   server.on("/", handleRoot);
@@ -174,7 +177,7 @@ void setup() {
 // ================= LOOP =================
 void loop() {
   server.handleClient();
-
+                                                                    // TESTA O FIREBASE, ESPERA 5 SEGUNDOS PARA ISSO
   if (!firebaseTestado && millis() > 5000 && WiFi.status() == WL_CONNECTED) {
     firebaseTestado = true;
 
@@ -188,13 +191,13 @@ void loop() {
       Serial.println("Erro Firebase no teste inicial");
     }
   }
-
+                                                                    // MEDE A DISTÂNCIA DO ULTRASSÔNICO EM TEMPOS EM TEMPOS
   if (millis() - ultimoPollDistancia >= INTERVALO_DISTANCIA) {
     ultimoPollDistancia = millis();
     distancia = medirDistancia();
     objetoDetectado = (distancia > 0 && distancia <= DISTANCIA_LIMITE);
   }
-
+                                                                    //FAZ O PROCESSO DE GRAVAR O UTLRASSÔNICO E AS FUNÇÕES DOS OBEJTOS NO FIREBASE
   if (firebaseOK && millis() - ultimoEnvioUltrassonico >= INTERVALO_ENVIO_ULTRASSONICO) {
     ultimoEnvioUltrassonico = millis();
     StaticJsonDocument<256> ultraDoc;
@@ -240,12 +243,13 @@ void inicializarRFID() {
 
   mfrc522.PCD_Init();
   delay(50);
-
+                                                                     //VERSÃO DO CHIP
   byte versao = mfrc522.PCD_ReadRegister(MFRC522::VersionReg);
 
   Serial.print("Firmware Version: 0x");
   Serial.println(versao, HEX);
-
+  
+                                                                     //SE VIER 0X00 OU 0XFF, DEU ERRO NA COMUNICAÇÃO
   if (versao == 0x00 || versao == 0xFF) {
     rfidOK = false;
     Serial.println("Falha na comunicacao com o RC522.");
@@ -258,6 +262,7 @@ void inicializarRFID() {
 }
 
 // ================= FIREBASE REST =================
+                                                                     //FUNÇÕES DE GETS E SETS DO FIREBASE(POST E PUT)
 bool firebaseGetString(const String &path, String &result) {
   HTTPClient https;
   String url = String(FIREBASE_HOST) + path + ".json";
@@ -364,7 +369,7 @@ bool firebasePostJSON(const String &path, const String &jsonPayload, String &res
 
   return true;
 }
-
+                                                                          //CONECTA COM FIREBASE JSON E HTTPS
 bool firebasePutJSON(const String &path, const String &jsonPayload, String &response) {
   HTTPClient https;
   String url = String(FIREBASE_HOST) + path + ".json";
@@ -423,6 +428,9 @@ float medirDistancia() {
   float soma = 0;
   int validas = 0;
 
+
+// vincular leitura da tag com ULTRASSÔNICO
+                                                                // MODO DE LEITURA DE IDA E VOLTA DO SOM ATÉ O OBJETO
   for (int i = 0; i < NUM_LEITURAS; i++) {
     digitalWrite(TRIG_PIN, LOW);
     delayMicroseconds(2);
@@ -475,7 +483,7 @@ void lerRFID() {
     mfrc522.PCD_StopCrypto1();
     return;
   }
-
+                                                              //GUARDA A ULTIMA LEITURA, QUAL FOI A TAG, QUANDO A TAG FOI LIDA
   ultimoUIDLido = uid;
   tempoUltimoUID = millis();
   ultimoUID = uid;
@@ -497,7 +505,7 @@ void lerRFID() {
 
   // 1) Tenta resolver como tag de patrimônio
   if (firebaseOK) {
-    String tagJson;
+    String tagJson;                                                                  
     bool tagEncontrada = firebaseGetJson("/tags_patrimonio/" + uidKey, tagJson);
     if (!tagEncontrada) {
       // Compatibilidade com registros antigos (chave com espacos).
@@ -540,7 +548,7 @@ void lerRFID() {
       }
     }
   }
-
+                                                            //GUARDA OS DADOS DA ULTIMA TAG
   ultimoNome = nome;
   ultimoTipoTag = tipoTag;
   ultimoPatrimonioNome = patrimonioNome;
@@ -563,7 +571,7 @@ void lerRFID() {
     Serial.println("Tag nao cadastrada.");
     piscarLED(2, 250);
   }
-
+                                                             //MONTA O JSON DE LEITURA
   StaticJsonDocument<512> doc;
   doc["uid"] = uid;
   doc["uid_key"] = uidKey;
@@ -587,7 +595,7 @@ void lerRFID() {
   if (firebaseOK) {
     String response;
 
-    // Histórico bruto das leituras
+    // Histórico bruto das leituras , ENVIANDO PARA O FIREBASE
     if (firebasePostJSON("/acessos", jsonPayload, response)) {
       Serial.println("Leitura registrada em /acessos.");
     } else {
@@ -608,7 +616,7 @@ void lerRFID() {
   mfrc522.PCD_StopCrypto1();
 }
 
-// ================= TEMPO =================
+// ================= TEMPO =================               SE A HORA DA INTERNET NÃO ESTIVER FUNCIONANDO, USA A HORA REAL
 long obterTimestamp() {
   time_t now = time(nullptr);
   if (now < 1000000000) {
@@ -627,7 +635,7 @@ void piscarLED(int vezes, int tempo) {
   }
 }
 
-// ================= SERVIDOR WEB =================
+// ================= SERVIDOR WEB =================           
 void enviarCORS() {
   server.sendHeader("Access-Control-Allow-Origin", "*");
   server.sendHeader("Access-Control-Allow-Methods", "GET, OPTIONS");

@@ -36,7 +36,7 @@
 
         <div class="campo">
         <label for="tag-admin">Tag UID (obrigatória para admin)</label>
-        <input type="text" id="tag-admin" name="tag-admin" placeholder="Ex: 33 9D F7 0D">
+        <input type="text" id="tag-admin" name="tag-admin" placeholder="Ex: 4D 6F 8I F4">
         </div>
 
         <div class="botoes">
@@ -55,6 +55,10 @@
   </main>
 
   <script src="auth.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-database-compat.js"></script>
+  <script src="firebaseconfig.js"></script>
   <script>
     const sessaoAtual = AuthApp.protegerPagina({ allowAnonymous: true });
     if (sessaoAtual) {
@@ -63,6 +67,121 @@
 
     const formLogin = document.getElementById("form-login");
     const loginMsg = document.getElementById("login-msg");
+    const tagAdminInput = document.getElementById("tag-admin");
+
+    const statusTag = document.createElement("p");
+    statusTag.id = "tag-detectada-msg";
+    statusTag.textContent = "Aguardando leitura de tag RFID...";
+    statusTag.style.marginTop = "6px";
+    statusTag.style.fontSize = "0.9rem";
+    statusTag.style.color = "#5b4c7d";
+    tagAdminInput.parentElement.appendChild(statusTag);
+
+    function normalizarTag(tag) {
+      return String(tag || "").trim().replace(/\s+/g, "").toUpperCase();
+    }
+
+    function formatarTag(tag) {
+      const limpa = normalizarTag(tag);
+      return limpa ? limpa.replace(/(.{2})(?=.)/g, "$1 ").trim() : "";
+    }
+
+    function iniciarLeituraTagRfid() {
+      if (!window.firebaseConfig || typeof firebase === "undefined") {
+        statusTag.textContent = "Configuração do Firebase não encontrada.";
+        statusTag.style.color = "#9b3f4d";
+        return;
+      }
+
+      try {
+        firebase.initializeApp(window.firebaseConfig);
+      } catch (erro) {
+        if (!String(erro && erro.message || "").includes("already exists")) {
+          statusTag.textContent = "Falha ao iniciar Firebase para leitura da tag.";
+          statusTag.style.color = "#9b3f4d";
+          return;
+        }
+      }
+
+      const auth = firebase.auth();
+      const db = firebase.database();
+      const baseUrl = String(window.firebaseConfig.databaseURL || "").replace(/\/+$/, "");
+
+      function obterUltimaRfid(dadosBrutos) {
+        const dados = dadosBrutos || {};
+        let ultimaRFID = null;
+
+        Object.values(dados).forEach((item) => {
+          if (!item) return;
+          const uid = String(item.uid || item.uid_tag || "");
+          const ehUltrassonico = uid.toUpperCase() === "SENSOR_ULTRASSONICO"
+            || String(item.tipo_tag || "").toLowerCase() === "ultrassonico";
+          if (ehUltrassonico) return;
+
+          if (!ultimaRFID || Number(item.timestamp || 0) > Number(ultimaRFID.timestamp || 0)) {
+            ultimaRFID = item;
+          }
+        });
+
+        return ultimaRFID;
+      }
+
+      function aplicarTagDetectada(leituras) {
+        const ultimaRFID = obterUltimaRfid(leituras);
+        if (!ultimaRFID) return false;
+        const uidDetectada = formatarTag(ultimaRFID.uid || ultimaRFID.uid_tag || "");
+        if (!uidDetectada) return false;
+        tagAdminInput.value = uidDetectada;
+        statusTag.textContent = `Tag detectada: ${uidDetectada}`;
+        statusTag.style.color = "#2f6b4f";
+        return true;
+      }
+
+      function iniciarListenerRealtime() {
+        db.ref("leituras_recentes")
+          .limitToLast(40)
+          .on("value", (snapshot) => {
+            aplicarTagDetectada(snapshot.val() || {});
+          }, () => {
+            statusTag.textContent = "Realtime indisponível. Tentando leitura por atualização periódica...";
+            statusTag.style.color = "#9b3f4d";
+          });
+      }
+
+      async function atualizarPorPolling() {
+        if (!baseUrl) return;
+        try {
+          const [respLeituras, respAcessos] = await Promise.all([
+            fetch(`${baseUrl}/leituras_recentes.json?ts=${Date.now()}`),
+            fetch(`${baseUrl}/acessos.json?ts=${Date.now()}`)
+          ]);
+          if (!respLeituras.ok && !respAcessos.ok) return;
+
+          const dadosLeituras = respLeituras.ok ? await respLeituras.json() : {};
+          const dadosAcessos = respAcessos.ok ? await respAcessos.json() : {};
+          const aplicadoLeituras = aplicarTagDetectada(dadosLeituras || {});
+          if (!aplicadoLeituras) {
+            aplicarTagDetectada(dadosAcessos || {});
+          }
+        } catch (erro) {
+        }
+      }
+
+      auth.signInAnonymously()
+        .then(() => {
+          iniciarListenerRealtime();
+          atualizarPorPolling();
+        })
+        .catch(() => {
+          statusTag.textContent = "Falha na autenticação anônima. Usando leitura periódica da tag.";
+          statusTag.style.color = "#9b3f4d";
+          iniciarListenerRealtime();
+        });
+
+      setInterval(atualizarPorPolling, 2000);
+    }
+
+    iniciarLeituraTagRfid();
 
     formLogin.addEventListener("submit", function (event) {
       event.preventDefault();

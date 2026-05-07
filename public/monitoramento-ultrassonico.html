@@ -13,11 +13,10 @@
     </div>
 
     <nav class="menu">
-      
-      <a href="Patrimônios.html">Patrimônios</a>
-      <a href="historico.html">Histórico</a>
-      <a href="salas-vinculadas.html">Salas Vinculadas</a>
-      <a href="monitoramento-ultrassonico.html" class="ativo">Monitoramento</a>
+    <a href="salas-vinculadas.html">Salas Vinculadas</a>
+    <a href="Patrimônios.html">Patrimônios</a>
+    <a href="historico.html">Histórico</a>
+    <a href="monitoramento-ultrassonico.html" class="ativo">Monitoramento</a>
     </nav>
   </header>
 
@@ -103,6 +102,8 @@
       ultimaLeituraRFID: null,
       tagsPatrimonio: {}
     };
+    const FIREBASE_UID_FALLBACK_KEY = "firebaseUidFallback";
+    const FIREBASE_DB_BASE_URL = String((window.firebaseConfig && window.firebaseConfig.databaseURL) || "").replace(/\/+$/, "");
 
     function formatarAgora() {
       return new Date().toLocaleString("pt-BR");
@@ -156,10 +157,33 @@
     }
 
     async function garantirUsuarioFirebase() {
-      if (!auth.currentUser) {
-        await auth.signInAnonymously();
+      if (auth.currentUser && auth.currentUser.uid) {
+        estado.firebaseUid = auth.currentUser.uid;
+        localStorage.setItem(FIREBASE_UID_FALLBACK_KEY, estado.firebaseUid);
+        return estado.firebaseUid;
       }
-      estado.firebaseUid = auth.currentUser.uid;
+
+      try {
+        await auth.signInAnonymously();
+      } catch (erro) {
+        const uidSalva = localStorage.getItem(FIREBASE_UID_FALLBACK_KEY);
+        if (uidSalva) {
+          estado.firebaseUid = uidSalva;
+          return estado.firebaseUid;
+        }
+        const base = String(sessao?.email || "usuario_local")
+          .trim()
+          .toLowerCase()
+          .replace(/[^a-z0-9]/g, "_");
+        estado.firebaseUid = `local_${base || "usuario"}`;
+        localStorage.setItem(FIREBASE_UID_FALLBACK_KEY, estado.firebaseUid);
+        return estado.firebaseUid;
+      }
+
+      estado.firebaseUid = auth.currentUser?.uid || localStorage.getItem(FIREBASE_UID_FALLBACK_KEY) || "";
+      if (estado.firebaseUid) {
+        localStorage.setItem(FIREBASE_UID_FALLBACK_KEY, estado.firebaseUid);
+      }
       return estado.firebaseUid;
     }
 
@@ -174,6 +198,8 @@
           timestamp: ultra.timestamp || Date.now()
         };
         atualizarPainelComLeitura(estado.ultimaLeitura);
+      }, () => {
+        leituraAlerta.textContent = "Realtime indisponível. Atualizando por consulta periódica.";
       });
     }
 
@@ -213,7 +239,61 @@
             timestamp: Date.now()
           };
           atualizarPainelComLeitura(estado.ultimaLeitura);
+        }, () => {
+          leituraAlerta.textContent = "Falha no listener de leituras RFID. Tentando fallback.";
         });
+    }
+
+    function extrairUltimaLeituraRFID(leituras) {
+      const valores = Object.values(leituras || {});
+      let ultimaRFID = null;
+      valores.forEach((item) => {
+        if (!item) return;
+        const uid = String(item.uid || item.uid_tag || "");
+        const ehUltrassonico = uid.toUpperCase() === "SENSOR_ULTRASSONICO" || item.tipo_tag === "ultrassonico";
+        if (ehUltrassonico) return;
+        if (!ultimaRFID || Number(item.timestamp || 0) > Number(ultimaRFID.timestamp || 0)) {
+          ultimaRFID = item;
+        }
+      });
+      return ultimaRFID;
+    }
+
+    async function atualizarLeiturasPorPolling() {
+      if (!FIREBASE_DB_BASE_URL) return;
+      try {
+        const [respUltra, respLeituras, respAcessos] = await Promise.all([
+          fetch(`${FIREBASE_DB_BASE_URL}/leituras_recentes/ultrassonico.json?ts=${Date.now()}`),
+          fetch(`${FIREBASE_DB_BASE_URL}/leituras_recentes.json?ts=${Date.now()}`),
+          fetch(`${FIREBASE_DB_BASE_URL}/acessos.json?ts=${Date.now()}`)
+        ]);
+        if (!respUltra.ok && !respLeituras.ok && !respAcessos.ok) return;
+
+        const ultra = respUltra.ok ? await respUltra.json() : {};
+        const leituras = respLeituras.ok ? await respLeituras.json() : {};
+        const acessos = respAcessos.ok ? await respAcessos.json() : {};
+        const ultimaRFID = extrairUltimaLeituraRFID(leituras || {}) || extrairUltimaLeituraRFID(acessos || {});
+
+        if (ultimaRFID) {
+          estado.ultimaLeituraRFID = {
+            uid: ultimaRFID.uid || ultimaRFID.uid_tag || "",
+            patrimonio_nome: ultimaRFID.patrimonio_nome || "--",
+            patrimonio_codigo: ultimaRFID.patrimonio_codigo || "--",
+            timestamp: ultimaRFID.timestamp || Date.now()
+          };
+        }
+
+        const distanciaAtual = Number(ultra?.distancia || 0);
+        estado.ultimaLeitura = {
+          uid: estado.ultimaLeituraRFID?.uid || ultra?.uid || "",
+          patrimonio_nome: estado.ultimaLeituraRFID?.patrimonio_nome || "--",
+          patrimonio_codigo: estado.ultimaLeituraRFID?.patrimonio_codigo || "--",
+          distancia: distanciaAtual,
+          timestamp: ultra?.timestamp || Date.now()
+        };
+        atualizarPainelComLeitura(estado.ultimaLeitura);
+      } catch (erro) {
+      }
     }
 
     function salvarConfiguracaoSala() {
@@ -301,6 +381,8 @@
         carregarTagsPatrimonio();
         observarUltimaLeituraRFID();
         observarLeiturasUltrassonico();
+        setInterval(atualizarLeiturasPorPolling, 2500);
+        atualizarLeiturasPorPolling();
       } catch (erro) {
         leituraAlerta.textContent = "Falha ao conectar no Firebase.";
       }

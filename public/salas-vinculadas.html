@@ -12,11 +12,11 @@
       <span class="logo-destaque">Proteção</span> Patrimonial RFID
     </div>
 
-    <nav class="menu">
-      <a href="Patrimônios.html">Patrimônios</a>
-      <a href="historico.html">Histórico</a>
-      <a href="salas-vinculadas.html" class="ativo">Salas Vinculadas</a>
-      <a href="monitoramento-ultrassonico.html">Monitoramento</a>
+   <nav class="menu">
+    <a href="salas-vinculadas.html" class="ativo">Salas Vinculadas</a>
+    <a href="Patrimônios.html">Patrimônios</a>
+    <a href="historico.html">Histórico</a>
+    <a href="monitoramento-ultrassonico.html">Monitoramento</a>
     </nav>
   </header>
 
@@ -27,19 +27,22 @@
         Crie os ambientes para organizar os patrimônios por local e sala.
       </p>
 
+
+
       <form class="form-sala" id="form-criar-sala">
         <div class="campo">
-          <label for="nome-local">Nome do local</label>
+          <label for="nome-local">Nome do local <span class="asterisco-obrigatorio">*</span></label>
+          
           <input type="text" id="nome-local" name="nome-local" placeholder="Ex: UEG" required>
         </div>
 
         <div class="campo">
-          <label for="sala-especifica">Sala específica</label>
+          <label for="sala-especifica">Sala específica <span class="asterisco-obrigatorio">*</span></label>
           <input type="text" id="sala-especifica" name="sala-especifica" placeholder="Ex: Sala-001" required>
         </div>
 
         <div class="campo">
-          <label for="limite-sala">Limite da sala (em cm)</label>
+          <label for="limite-sala">Limite da sala (em cm) <span class="asterisco-obrigatorio">*</span></label>
           <input type="number" id="limite-sala" name="limite-sala" placeholder="Ex: 300" min="1" required>
           <small>Informe a distância máxima para considerar que o patrimônio está dentro da sala.</small>
         </div>
@@ -187,6 +190,11 @@
     const detalheSalaDescricao = document.getElementById("detalhe-sala-descricao");
     const detalheSalaLocalizacao = document.getElementById("detalhe-sala-localizacao");
     const detalheSalaFoto = document.getElementById("detalhe-sala-foto");
+    const camposObrigatoriosCriarSala = [
+      document.getElementById("nome-local"),
+      document.getElementById("sala-especifica"),
+      document.getElementById("limite-sala")
+    ];
 
     const estado = {
       uid: "",
@@ -349,8 +357,21 @@
       });
     }
 
+    function validarCamposObrigatoriosCriarSala() {
+      let temErro = false;
+      camposObrigatoriosCriarSala.forEach((input) => {
+        const invalido = !input.value.trim() || !input.checkValidity();
+        if (invalido) temErro = true;
+      });
+      return !temErro;
+    }
+
     formCriarSala.addEventListener("submit", async (event) => {
       event.preventDefault();
+      if (!validarCamposObrigatoriosCriarSala()) {
+        msgSalaCriada.textContent = "Preencha os campos obrigatórios para continuar.";
+        return;
+      }
       const nomeLocal = document.getElementById("nome-local").value.trim();
       const nomeSala = document.getElementById("sala-especifica").value.trim();
       const limite = Number(document.getElementById("limite-sala").value || 0);
@@ -435,6 +456,12 @@
       modalDetalhesSala.style.display = "none";
     });
 
+    camposObrigatoriosCriarSala.forEach((input) => {
+      input.addEventListener("input", () => {
+        msgSalaCriada.textContent = "";
+      });
+    });
+
     async function iniciar() {
       await auth.signInAnonymously();
       estado.uid = auth.currentUser.uid;
@@ -442,6 +469,16 @@
       carregarPatrimonios();
       observarVinculosDaSala();
     }
+
+    
+
+
+
+
+
+
+
+
 
     iniciar();
   </script>
