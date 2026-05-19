@@ -1,0 +1,552 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Monitoramento </title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <header class="topo">
+    <div class="logo-texto">
+      <span class="logo-destaque">Proteção</span> Patrimonial RFID
+    </div>
+
+    <nav class="menu">
+    <a href="salas-vinculadas.html">Salas Vinculadas</a>
+    <a href="Patrimônios.html">Patrimônios</a>
+    <a href="historico.html">Histórico</a>
+    <a href="monitoramento-ultrassonico.html" class="ativo">Monitoramento</a>
+    </nav>
+  </header>
+
+  <main class="movimentacao-layout">
+    <section class="card" data-role-required="admin">
+      <h2>Cadastro de monitoramento por sala</h2>
+      <p class="sala-subtitulo">
+        Selecione a sala vinculada. O sistema utilizará automaticamente o limite em centímetros
+        cadastrado para a sala e emitirá alerta caso algum patrimônio vinculado ultrapasse esse limite.
+      </p>
+
+      <form class="form-sala" id="form-monitoramento-sala">
+        <div class="campo">
+          <label for="sala-monitorada">Sala vinculada</label>
+          <select id="sala-monitorada" name="sala-monitorada">
+            <option value="">Selecione uma sala vinculada</option>
+          </select>
+        </div>
+
+        <div class="campo">
+          <label for="limite-sala-monitorada">Limite da sala (cm)</label>
+          <input
+            type="number"
+            id="limite-sala-monitorada"
+            name="limite-sala-monitorada"
+            placeholder="Ex: 300"
+            readonly
+          >
+        </div>
+        <div class="campo">
+          <label for="patrimonio-monitorado">Patrimônio vinculado (tag)</label>
+          <select id="patrimonio-monitorado" name="patrimonio-monitorado">
+            <option value="">Selecione uma sala para listar patrimônios</option>
+          </select>
+          <small>Com um único ultrassônico, monitore um patrimônio por vez.</small>
+        </div>
+
+        <div class="botoes">
+          <button type="submit" class="btn btn-primario">Ativar monitoramento da sala</button>
+        </div>
+      </form>
+    </section>
+
+    <section class="card">
+      <h2>Dados do patrimônio cadastrado</h2>
+      <div class="leitura-atual">
+        <p><strong>Patrimônio selecionado:</strong> <span id="cadastro-patrimonio">--</span></p>
+        <p><strong>Código:</strong> <span id="cadastro-codigo">--</span></p>
+        <p><strong>Categoria:</strong> <span id="cadastro-categoria">--</span></p>
+        <p><strong>Tag cadastrada:</strong> <span id="cadastro-tag">--</span></p>
+        <p><strong>Sala de cadastro:</strong> <span id="cadastro-sala">--</span></p>
+        <p><strong>Distância cadastrada:</strong> <span id="cadastro-distancia">--</span></p>
+        <p><strong>Status cadastrado:</strong> <span id="cadastro-status">--</span></p>
+      </div>
+    </section>
+
+    <section class="card">
+      <h2>Leitura atual monitorada</h2>
+
+      <div class="leitura-atual">
+        <p><strong>Sala monitorada:</strong> <span id="leitura-sala">--</span></p>
+        <p><strong>Última Tag lida:</strong> <span id="leitura-tag">--</span></p>
+        <p><strong>Patrimônio detectado:</strong> <span id="leitura-patrimonio">--</span></p>
+        <p><strong>Distância atual:</strong> <span id="leitura-distancia">--</span></p>
+        <p><strong>Limite da sala:</strong> <span id="leitura-limite">--</span></p>
+        <p><strong>Status:</strong> <span id="leitura-status">--</span></p>
+        <p><strong>Atualização:</strong> <span id="leitura-atualizacao">--</span></p>
+        <p><strong>Último alerta:</strong> <span id="leitura-alerta">--</span></p>
+      </div>
+    </section>
+
+  </main>
+
+  <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-database-compat.js"></script>
+  <script src="firebaseconfig.js"></script>
+  <script src="auth.js"></script>
+  <script>
+    const sessao = AuthApp.protegerPagina({ allowedRoles: ["admin", "comum"] });
+
+    const salaMonitorada = document.getElementById("sala-monitorada");
+    const limiteSalaMonitorada = document.getElementById("limite-sala-monitorada");
+    const patrimonioMonitorado = document.getElementById("patrimonio-monitorado");
+    const formMonitoramentoSala = document.getElementById("form-monitoramento-sala");
+
+    const leituraSala = document.getElementById("leitura-sala");
+    const leituraTag = document.getElementById("leitura-tag");
+    const leituraPatrimonio = document.getElementById("leitura-patrimonio");
+    const leituraDistancia = document.getElementById("leitura-distancia");
+    const leituraLimite = document.getElementById("leitura-limite");
+    const leituraStatus = document.getElementById("leitura-status");
+    const leituraAtualizacao = document.getElementById("leitura-atualizacao");
+    const leituraAlerta = document.getElementById("leitura-alerta");
+    const cadastroPatrimonio = document.getElementById("cadastro-patrimonio");
+    const cadastroCodigo = document.getElementById("cadastro-codigo");
+    const cadastroCategoria = document.getElementById("cadastro-categoria");
+    const cadastroTag = document.getElementById("cadastro-tag");
+    const cadastroSala = document.getElementById("cadastro-sala");
+    const cadastroDistancia = document.getElementById("cadastro-distancia");
+    const cadastroStatus = document.getElementById("cadastro-status");
+
+    firebase.initializeApp(window.firebaseConfig);
+    const db = firebase.database();
+    const auth = firebase.auth();
+
+    const estado = {
+      monitoramentoSala: JSON.parse(localStorage.getItem("monitoramentoSalaConfig") || "null"),
+      ultimaLeitura: null,
+      firebaseUid: "",
+      salas: [],
+      patrimonios: [],
+      ultimaLeituraRFID: null,
+      vinculosSalaAtiva: {},
+      refVinculosSalaAtiva: null
+    };
+    const FIREBASE_UID_FALLBACK_KEY = "firebaseUidFallback";
+    const FIREBASE_DB_BASE_URL = String((window.firebaseConfig && window.firebaseConfig.databaseURL) || "").replace(/\/+$/, "");
+
+    function formatarAgora() {
+      return new Date().toLocaleString("pt-BR");
+    }
+
+    function formatarTag(uid) {
+      const limpa = String(uid || "").replace(/\s+/g, "").toUpperCase();
+      return limpa ? limpa.replace(/(.{2})(?=.)/g, "$1 ").trim() : "--";
+    }
+
+    function formatarNomeSala(chaveSala) {
+      const sala = estado.salas.find((item) => item.id === chaveSala);
+      if (sala) return `${sala.nome_local} - ${sala.nome_sala}`;
+      return "--";
+    }
+
+    function normalizarTag(uid) {
+      return String(uid || "").replace(/\s+/g, "").toUpperCase();
+    }
+
+    function gerarUidSistema() {
+      const base = String(sessao?.email || "usuario_local")
+        .trim()
+        .toLowerCase()
+        .replace(/[^a-z0-9]/g, "_");
+      return `usr_${base || "usuario"}`;
+    }
+
+    function obterPatrimonioMonitorado() {
+      const patrimonioId = String(estado.monitoramentoSala?.patrimonioId || "");
+      if (!patrimonioId) return null;
+      return estado.patrimonios.find((item) => String(item.id || "") === patrimonioId) || null;
+    }
+
+    function obterPatrimonioPorTagLida(uid) {
+      const uidNormalizada = normalizarTag(uid || "");
+      if (!uidNormalizada) return null;
+      return estado.patrimonios.find((item) => normalizarTag(item.uid_tag || "") === uidNormalizada) || null;
+    }
+
+    function patrimonioVinculadoSalaAtiva(patrimonioId) {
+      const id = String(patrimonioId || "");
+      if (!id) return false;
+      return Object.prototype.hasOwnProperty.call(estado.vinculosSalaAtiva || {}, id);
+    }
+
+    function atualizarPainelCadastro() {
+      const patrimonio = obterPatrimonioMonitorado();
+      if (!patrimonio) {
+        cadastroPatrimonio.textContent = "--";
+        cadastroCodigo.textContent = "--";
+        cadastroCategoria.textContent = "--";
+        cadastroTag.textContent = "--";
+        cadastroSala.textContent = "--";
+        cadastroDistancia.textContent = "--";
+        cadastroStatus.textContent = "--";
+        return;
+      }
+
+      const salaIdPatrimonio = patrimonio.sala_id_padrao || patrimonio.sala_id_atual || estado.monitoramentoSala?.sala || "";
+      const salaPatrimonio = estado.salas.find((item) => item.id === salaIdPatrimonio) || null;
+      const distanciaCadastro = Number(salaPatrimonio?.limite_cm || patrimonio.limite_ultrassonico || estado.monitoramentoSala?.limite || 0);
+
+      cadastroPatrimonio.textContent = patrimonio.nome || "--";
+      cadastroCodigo.textContent = patrimonio.codigo || "--";
+      cadastroCategoria.textContent = patrimonio.categoria || "--";
+      cadastroTag.textContent = formatarTag(patrimonio.uid_tag || "");
+      cadastroSala.textContent = salaPatrimonio
+        ? `${salaPatrimonio.nome_local || "--"} - ${salaPatrimonio.nome_sala || "--"}`
+        : formatarNomeSala(estado.monitoramentoSala?.sala || "");
+      cadastroDistancia.textContent = distanciaCadastro > 0 ? `${distanciaCadastro} cm` : "--";
+      cadastroStatus.textContent = patrimonio.status_atual || "dentro";
+    }
+
+    function renderSelectPatrimonioMonitorado() {
+      if (!patrimonioMonitorado) return;
+      const selecionadoAtual = String(estado.monitoramentoSala?.patrimonioId || "");
+      const idsVinculados = Object.keys(estado.vinculosSalaAtiva || {});
+      const patrimoniosSala = estado.patrimonios.filter((item) => idsVinculados.includes(String(item.id || "")));
+      if (!patrimoniosSala.length) {
+        patrimonioMonitorado.innerHTML = '<option value="">Nenhum patrimônio vinculado nesta sala</option>';
+        atualizarPainelCadastro();
+        return;
+      }
+      patrimonioMonitorado.innerHTML = '<option value="">Selecione um patrimônio</option>'
+        + patrimoniosSala.map((item) => `<option value="${item.id || ""}">${item.nome || "--"} - ${formatarTag(item.uid_tag || "")}</option>`).join("");
+      if (selecionadoAtual && idsVinculados.includes(selecionadoAtual)) {
+        patrimonioMonitorado.value = selecionadoAtual;
+      }
+      atualizarPainelCadastro();
+    }
+
+    function atualizarPainelComLeitura(leitura) {
+      const distanciaNumero = Number(leitura?.distancia || 0);
+      const limite = Number(estado.monitoramentoSala?.limite || 0);
+      const salaNome = formatarNomeSala(estado.monitoramentoSala?.sala || "");
+      const uidFormatada = formatarTag(leitura?.uid || "");
+      const uidLida = normalizarTag(leitura?.uid || "");
+      const patrimonioSelecionado = obterPatrimonioMonitorado();
+      const patrimonioDaTagLida = obterPatrimonioPorTagLida(uidLida);
+      const patrimonioLidoPertenceSala = patrimonioDaTagLida
+        ? patrimonioVinculadoSalaAtiva(patrimonioDaTagLida.id)
+        : false;
+
+      leituraSala.textContent = salaNome;
+      leituraTag.textContent = uidFormatada;
+      leituraDistancia.textContent = `${distanciaNumero.toFixed(1)} cm`;
+      leituraLimite.textContent = limite > 0 ? `${limite} cm` : "--";
+      leituraAtualizacao.textContent = formatarAgora();
+
+      if (limite <= 0) {
+        leituraStatus.textContent = "Sem limite configurado";
+        leituraStatus.className = "status status-fora";
+        leituraPatrimonio.textContent = "Defina uma sala com limite em cm para monitorar.";
+        leituraAlerta.textContent = "Sem sala ativa para validação.";
+        return;
+      }
+
+      if (!patrimonioSelecionado) {
+        leituraStatus.textContent = "Selecione um patrimônio para monitorar";
+        leituraStatus.className = "status status-fora";
+        leituraPatrimonio.textContent = "--";
+        leituraAlerta.textContent = "Escolha o patrimônio vinculado à sala para associar com o ultrassônico.";
+        return;
+      }
+
+      const uidMonitorada = normalizarTag(patrimonioSelecionado.uid_tag || "");
+      leituraPatrimonio.textContent = patrimonioDaTagLida
+        ? `${patrimonioDaTagLida.nome || "--"} (${patrimonioDaTagLida.codigo || "--"})`
+        : `${patrimonioSelecionado.nome || "--"} (${patrimonioSelecionado.codigo || "--"})`;
+
+      if (uidLida && patrimonioDaTagLida && !patrimonioLidoPertenceSala) {
+        leituraStatus.textContent = "Patrimônio lido não pertence à sala monitorada";
+        leituraStatus.className = "status status-fora";
+        leituraAlerta.textContent = `${patrimonioDaTagLida.nome || "Este patrimônio"} não está vinculado à sala ${salaNome}.`;
+        return;
+      }
+
+      if (uidLida && patrimonioDaTagLida && patrimonioLidoPertenceSala && uidLida !== uidMonitorada) {
+        leituraStatus.textContent = "Tag lida de outro patrimônio da sala";
+        leituraStatus.className = "status status-fora";
+        leituraAlerta.textContent = `${patrimonioDaTagLida.nome || "Patrimônio"} está vinculado à sala, mas não é o patrimônio selecionado para este monitoramento.`;
+        return;
+      }
+
+      if (!uidLida || uidLida !== uidMonitorada) {
+        leituraStatus.textContent = "Aguardando leitura da tag vinculada";
+        leituraStatus.className = "status status-fora";
+        leituraAlerta.textContent = `Passe a tag ${formatarTag(uidMonitorada)} para ativar a detecção deste patrimônio.`;
+        return;
+      }
+
+      const presencaDetectada = limite > 0 && distanciaNumero > 0 ? distanciaNumero <= limite : false;
+      leituraStatus.textContent = presencaDetectada
+        ? "Patrimônio detectado dentro do recinto"
+        : "Sem presença detectada do patrimônio";
+      leituraStatus.className = presencaDetectada ? "status status-dentro" : "status status-fora";
+      leituraAlerta.textContent = presencaDetectada
+        ? "Tag correta lida e presença confirmada pelo ultrassônico."
+        : "Tag correta lida, porém sem presença dentro do limite da sala.";
+    }
+
+    async function garantirUsuarioFirebase() {
+      const uidSistema = gerarUidSistema();
+      try {
+        if (!auth.currentUser || !auth.currentUser.uid) {
+          await auth.signInAnonymously();
+        }
+      } catch (erro) {
+      }
+      estado.firebaseUid = uidSistema;
+      localStorage.setItem(FIREBASE_UID_FALLBACK_KEY, uidSistema);
+      return uidSistema;
+    }
+
+    function observarLeiturasUltrassonico() {
+      db.ref("leituras_recentes/ultrassonico").on("value", (snapshot) => {
+        const ultra = snapshot.val() || {};
+        estado.ultimaLeitura = {
+          uid: estado.ultimaLeituraRFID?.uid || ultra.uid || "",
+          patrimonio_nome: estado.ultimaLeituraRFID?.patrimonio_nome || "--",
+          patrimonio_codigo: estado.ultimaLeituraRFID?.patrimonio_codigo || "--",
+          distancia: Number(ultra.distancia || 0),
+          timestamp: ultra.timestamp || Date.now()
+        };
+        atualizarPainelComLeitura(estado.ultimaLeitura);
+      }, () => {
+        leituraAlerta.textContent = "Realtime indisponível. Atualizando por consulta periódica.";
+      });
+    }
+
+    function observarUltimaLeituraRFID() {
+      db.ref("leituras_recentes")
+        .limitToLast(40)
+        .on("value", (snapshot) => {
+          const leituras = snapshot.val() || {};
+          let ultimaRFID = null;
+
+          Object.values(leituras).forEach((item) => {
+            if (!item) return;
+            const uid = String(item.uid || item.uid_tag || "");
+            const ehUltrassonico = uid.toUpperCase() === "SENSOR_ULTRASSONICO" || item.tipo_tag === "ultrassonico";
+            if (ehUltrassonico) return;
+
+            if (!ultimaRFID || Number(item.timestamp || 0) > Number(ultimaRFID.timestamp || 0)) {
+              ultimaRFID = item;
+            }
+          });
+
+          if (!ultimaRFID) return;
+
+          estado.ultimaLeituraRFID = {
+            uid: ultimaRFID.uid || ultimaRFID.uid_tag || "",
+            patrimonio_nome: ultimaRFID.patrimonio_nome || "--",
+            patrimonio_codigo: ultimaRFID.patrimonio_codigo || "--",
+            timestamp: ultimaRFID.timestamp || Date.now()
+          };
+
+          const distanciaAtual = Number(estado.ultimaLeitura?.distancia || 0);
+          estado.ultimaLeitura = {
+            uid: estado.ultimaLeituraRFID.uid,
+            patrimonio_nome: estado.ultimaLeituraRFID.patrimonio_nome,
+            patrimonio_codigo: estado.ultimaLeituraRFID.patrimonio_codigo,
+            distancia: distanciaAtual,
+            timestamp: Date.now()
+          };
+          atualizarPainelComLeitura(estado.ultimaLeitura);
+        }, () => {
+          leituraAlerta.textContent = "Falha no listener de leituras RFID. Tentando fallback.";
+        });
+    }
+
+    function extrairUltimaLeituraRFID(leituras) {
+      const valores = Object.values(leituras || {});
+      let ultimaRFID = null;
+      valores.forEach((item) => {
+        if (!item) return;
+        const uid = String(item.uid || item.uid_tag || "");
+        const ehUltrassonico = uid.toUpperCase() === "SENSOR_ULTRASSONICO" || item.tipo_tag === "ultrassonico";
+        if (ehUltrassonico) return;
+        if (!ultimaRFID || Number(item.timestamp || 0) > Number(ultimaRFID.timestamp || 0)) {
+          ultimaRFID = item;
+        }
+      });
+      return ultimaRFID;
+    }
+
+    async function atualizarLeiturasPorPolling() {
+      if (!FIREBASE_DB_BASE_URL) return;
+      try {
+        const [respUltra, respLeituras, respAcessos] = await Promise.all([
+          fetch(`${FIREBASE_DB_BASE_URL}/leituras_recentes/ultrassonico.json?ts=${Date.now()}`),
+          fetch(`${FIREBASE_DB_BASE_URL}/leituras_recentes.json?ts=${Date.now()}`),
+          fetch(`${FIREBASE_DB_BASE_URL}/acessos.json?ts=${Date.now()}`)
+        ]);
+        if (!respUltra.ok && !respLeituras.ok && !respAcessos.ok) return;
+
+        const ultra = respUltra.ok ? await respUltra.json() : {};
+        const leituras = respLeituras.ok ? await respLeituras.json() : {};
+        const acessos = respAcessos.ok ? await respAcessos.json() : {};
+        const ultimaRFID = extrairUltimaLeituraRFID(leituras || {}) || extrairUltimaLeituraRFID(acessos || {});
+
+        if (ultimaRFID) {
+          estado.ultimaLeituraRFID = {
+            uid: ultimaRFID.uid || ultimaRFID.uid_tag || "",
+            patrimonio_nome: ultimaRFID.patrimonio_nome || "--",
+            patrimonio_codigo: ultimaRFID.patrimonio_codigo || "--",
+            timestamp: ultimaRFID.timestamp || Date.now()
+          };
+        }
+
+        const distanciaAtual = Number(ultra?.distancia || 0);
+        estado.ultimaLeitura = {
+          uid: estado.ultimaLeituraRFID?.uid || ultra?.uid || "",
+          patrimonio_nome: estado.ultimaLeituraRFID?.patrimonio_nome || "--",
+          patrimonio_codigo: estado.ultimaLeituraRFID?.patrimonio_codigo || "--",
+          distancia: distanciaAtual,
+          timestamp: ultra?.timestamp || Date.now()
+        };
+        atualizarPainelComLeitura(estado.ultimaLeitura);
+      } catch (erro) {
+      }
+    }
+
+    function salvarConfiguracaoSala() {
+      if (!salaMonitorada || !limiteSalaMonitorada || !patrimonioMonitorado) return;
+      estado.monitoramentoSala = {
+        sala: salaMonitorada.value,
+        limite: Number(limiteSalaMonitorada.value || 0),
+        patrimonioId: patrimonioMonitorado.value || ""
+      };
+      localStorage.setItem("monitoramentoSalaConfig", JSON.stringify(estado.monitoramentoSala));
+      observarVinculosSalaAtiva();
+      atualizarPainelCadastro();
+    }
+
+    function restaurarConfiguracoes() {
+      if (estado.monitoramentoSala && salaMonitorada && limiteSalaMonitorada) {
+        salaMonitorada.value = estado.monitoramentoSala.sala || "";
+        limiteSalaMonitorada.value = estado.monitoramentoSala.limite || "";
+      }
+
+      leituraAlerta.textContent = "--";
+      leituraStatus.className = "";
+      leituraAtualizacao.textContent = "--";
+      atualizarPainelCadastro();
+    }
+
+    function carregarSalasMonitoramento() {
+      db.ref(`salas/${estado.firebaseUid}`).on("value", (snapshot) => {
+        const dados = snapshot.val() || {};
+        estado.salas = Object.entries(dados).map(([id, valor]) => ({ id, ...valor }));
+        const options = ['<option value="">Selecione uma sala vinculada</option>']
+          .concat(estado.salas.map((sala) => `<option value="${sala.id}">${sala.nome_local} - ${sala.nome_sala}</option>`));
+        salaMonitorada.innerHTML = options.join("");
+
+        if (estado.monitoramentoSala?.sala) {
+          salaMonitorada.value = estado.monitoramentoSala.sala;
+          const salaAtual = estado.salas.find((item) => item.id === estado.monitoramentoSala.sala);
+          limiteSalaMonitorada.value = salaAtual?.limite_cm || "";
+          estado.monitoramentoSala.limite = Number(salaAtual?.limite_cm || 0);
+          localStorage.setItem("monitoramentoSalaConfig", JSON.stringify(estado.monitoramentoSala));
+        }
+        renderSelectPatrimonioMonitorado();
+        atualizarPainelCadastro();
+      });
+    }
+
+    function carregarPatrimoniosMonitoramento() {
+      db.ref("patrimonios").on("value", (snapshot) => {
+        const dados = snapshot.val() || {};
+        const mapa = new Map();
+        coletarRegistrosEmArvore(dados, (chave, valor) => {
+          if (!valor.uid_tag && !valor.nome && !valor.codigo) return;
+          const id = String(valor.id || chave || "");
+          if (!id || mapa.has(id)) return;
+          mapa.set(id, { ...valor, id });
+        });
+        estado.patrimonios = Array.from(mapa.values());
+        renderSelectPatrimonioMonitorado();
+        atualizarPainelCadastro();
+      });
+    }
+
+    function coletarRegistrosEmArvore(base, coletor, caminho = "") {
+      if (!base || typeof base !== "object") return;
+      Object.entries(base).forEach(([chave, valor]) => {
+        const caminhoAtual = caminho ? `${caminho}/${chave}` : chave;
+        if (valor && typeof valor === "object" && !Array.isArray(valor)) {
+          coletor(chave, valor, caminhoAtual);
+          coletarRegistrosEmArvore(valor, coletor, caminhoAtual);
+        }
+      });
+    }
+
+    function observarVinculosSalaAtiva() {
+      const salaId = estado.monitoramentoSala?.sala || "";
+      if (estado.refVinculosSalaAtiva) {
+        estado.refVinculosSalaAtiva.off();
+        estado.refVinculosSalaAtiva = null;
+      }
+      if (!estado.firebaseUid || !salaId) {
+        estado.vinculosSalaAtiva = {};
+        return;
+      }
+      estado.refVinculosSalaAtiva = db.ref(`salas_patrimonios/${estado.firebaseUid}/${salaId}`);
+      estado.refVinculosSalaAtiva.on("value", (snapshot) => {
+        estado.vinculosSalaAtiva = snapshot.val() || {};
+        renderSelectPatrimonioMonitorado();
+      }, () => {
+        estado.vinculosSalaAtiva = {};
+        renderSelectPatrimonioMonitorado();
+      });
+    }
+
+    if (salaMonitorada) {
+      salaMonitorada.addEventListener("change", function () {
+        const salaSelecionada = estado.salas.find((item) => item.id === this.value);
+        limiteSalaMonitorada.value = salaSelecionada?.limite_cm || "";
+        if (patrimonioMonitorado) patrimonioMonitorado.value = "";
+        salvarConfiguracaoSala();
+      });
+    }
+
+    if (patrimonioMonitorado) {
+      patrimonioMonitorado.addEventListener("change", salvarConfiguracaoSala);
+    }
+
+    if (formMonitoramentoSala) {
+      formMonitoramentoSala.addEventListener("submit", function (event) {
+        event.preventDefault();
+        salvarConfiguracaoSala();
+      });
+    }
+
+    async function iniciar() {
+      try {
+        await garantirUsuarioFirebase();
+        carregarSalasMonitoramento();
+        carregarPatrimoniosMonitoramento();
+        observarVinculosSalaAtiva();
+        observarUltimaLeituraRFID();
+        observarLeiturasUltrassonico();
+        setInterval(atualizarLeiturasPorPolling, 2500);
+        atualizarLeiturasPorPolling();
+      } catch (erro) {
+        leituraAlerta.textContent = "Falha ao conectar no Firebase.";
+      }
+    }
+
+    restaurarConfiguracoes();
+    iniciar();
+  </script>
+</body>
+</html>

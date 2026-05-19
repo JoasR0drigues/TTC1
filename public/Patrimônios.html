@@ -1,0 +1,766 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Patrimônios - Proteção Patrimonial RFID</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <header class="topo">
+    <div class="logo-texto">
+      <span class="logo-destaque">Proteção</span> Patrimonial RFID
+    </div>
+
+    <nav class="menu">
+    <a href="salas-vinculadas.html">Salas Vinculadas</a>
+    <a href="Patrimônios.html" class="ativo">Patrimônios</a>
+    <a href="historico.html">Histórico</a>
+    <a href="monitoramento-ultrassonico.html">Monitoramento</a>
+    </nav>
+  </header>
+
+  <main class="patrimonios-layout">
+    <section class="card">
+      <h2>Leitura pendente</h2>
+      <p class="tag-lida" id="uid-lida">--</p>
+      <p><strong>Tipo da tag:</strong> <span id="leitura-tipo">--</span></p>
+      <p><strong>Patrimônio:</strong> <span id="leitura-patrimonio">Nenhum patrimônio identificado</span></p>
+      <p><strong>Código:</strong> <span id="leitura-codigo">--</span></p>
+      <p><strong>Horário:</strong> <span id="leitura-horario">--</span></p>
+      <p><strong>Status:</strong> <span id="leitura-status">--</span></p>
+    </section>
+
+    <section class="card" data-role-required="admin">
+      <h2>Confirmar movimentação</h2>
+      <p>Digite a tag RFID e confirme se o objeto está entrando ou saindo.</p>
+      <div class="campo">
+        <label for="tag-movimentacao">Tag RFID para movimentação</label>
+        <input type="text" id="tag-movimentacao" placeholder="Ex: A1 B2 C3 D4">
+      </div>
+      <div class="acoes-movimentacao">
+        <button class="btn-status btn-entrando" id="btn-entrando" type="button">Objeto dentro</button>
+        <button class="btn-status btn-saindo" id="btn-saindo" type="button">Objeto saiu</button>
+      </div>
+      <p id="movimentacao-msg">Sem movimentação confirmada.</p>
+    </section>
+
+    <section class="card" data-role-required="admin">
+      <h2>Cadastrar patrimônio</h2>
+      <form class="form-patrimonio" id="form-patrimonio">
+        <div class="campo">
+          <label for="codigo">Código do patrimônio <span class="asterisco-obrigatorio">*</span></label>
+          <input type="text" id="codigo" name="codigo" placeholder="Ex: PATRI-001" required>
+        </div>
+
+        <div class="campo">
+          <label for="nome_objeto">Nome do objeto <span class="asterisco-obrigatorio">*</span></label>
+          <input type="text" id="nome_objeto" name="nome_objeto" placeholder="Ex: Mesa-001" required>
+        </div>
+
+        <div class="campo">
+          <label for="categoria">Categoria <span class="asterisco-obrigatorio">*</span></label>
+          <input type="text" id="categoria" name="categoria" placeholder="Ex:MÓVEL" required>
+        </div>
+
+        <div class="campo">
+          <label for="tag_rfid">Tag RFID do objeto <span class="asterisco-obrigatorio">*</span></label>
+          <input type="text" id="tag_rfid" name="tag_rfid" placeholder="Ex: A1 B2 C3 D4" required>
+        </div>
+
+        
+
+        <div class="campo">
+          <label for="descricao">Descrição</label>
+          <textarea id="descricao" name="descricao" placeholder="Descreva o bem patrimonial"></textarea>
+        </div>
+
+        <div class="campo">
+          <label for="foto">Foto do patrimônio</label>
+          <input type="file" id="foto" name="foto" accept="image/*" capture="environment">
+        </div>
+
+        <div class="botoes">
+          <button type="submit" class="btn btn-primario">Salvar patrimônio</button>
+        </div>
+      </form>
+    </section>
+
+    <section class="card">
+      <h2>Patrimônios cadastrados</h2>
+      <div class="tabela-wrapper">
+        <table>
+        <thead>
+        <tr>
+        <th>Código</th>
+        <th>Objeto</th>
+        <th>Tag RFID</th>
+        <th>Foto</th>
+        <th>Status atual</th>
+        <th>Ações</th>
+        </tr>
+        </thead>
+        <tbody id="tabela-patrimonios-body">
+       <tr>
+        <td colspan="6" class="tabela-vazia">Nenhum patrimônio cadastrado.</td>
+        </tr>
+        </tbody>
+        </table>
+      </div>
+    </section>
+
+  </main>
+
+  <section id="modal-detalhes-patrimonio" class="card" style="display:none; position: fixed; inset: 8% 10%; z-index: 999; overflow-y: auto;">
+    <div class="botoes" style="justify-content: flex-end;">
+      <button type="button" class="btn btn-excluir" id="btn-fechar-detalhes">Fechar</button>
+    </div>
+    <h2>Detalhes do patrimônio</h2>
+    <p><strong>Código:</strong> <span id="detalhe-codigo">--</span></p>
+    <p><strong>Nome:</strong> <span id="detalhe-nome">--</span></p>
+    <p><strong>Categoria:</strong> <span id="detalhe-categoria">--</span></p>
+    <p><strong>Tag RFID:</strong> <span id="detalhe-tag">--</span></p>
+    <p><strong>Status:</strong> <span id="detalhe-status">--</span></p>
+    <p><strong>Descrição:</strong> <span id="detalhe-descricao">--</span></p>
+    <p><strong>Criado em:</strong> <span id="detalhe-criado-em">--</span></p>
+    <div style="margin-top: 12px;">
+      <img id="detalhe-foto" alt="Foto completa do patrimônio" style="width:100%; max-height:480px; object-fit:contain; border-radius:12px; border:1px solid #ddd6f3; background:#fff;">
+    </div>
+  </section>
+
+  <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-database-compat.js"></script>
+  <script src="firebaseconfig.js"></script>
+  <script src="auth.js"></script>
+  <script>
+    const sessao = AuthApp.protegerPagina({ allowedRoles: ["admin", "comum"] });
+
+    const estado = {
+      firebaseUid: "",
+      patrimonios: []
+    };
+    const FIREBASE_UID_FALLBACK_KEY = "firebaseUidFallback";
+    const FIREBASE_DB_BASE_URL = String((window.firebaseConfig && window.firebaseConfig.databaseURL) || "").replace(/\/+$/, "");
+
+    const refs = {
+      uidLida: document.getElementById("uid-lida"),
+      leituraTipo: document.getElementById("leitura-tipo"),
+      leituraPatrimonio: document.getElementById("leitura-patrimonio"),
+      leituraCodigo: document.getElementById("leitura-codigo"),
+      leituraHorario: document.getElementById("leitura-horario"),
+      leituraStatus: document.getElementById("leitura-status"),
+      nomeObjetoInput: document.getElementById("nome_objeto"),
+      tagRfidInput: document.getElementById("tag_rfid"),
+      tagMovInput: document.getElementById("tag-movimentacao"),
+      categoriaInput: document.getElementById("categoria"),
+      btnEntrando: document.getElementById("btn-entrando"),
+      btnSaindo: document.getElementById("btn-saindo"),
+      movimentacaoMsg: document.getElementById("movimentacao-msg"),
+      formPatrimonio: document.getElementById("form-patrimonio"),
+      tabelaBody: document.getElementById("tabela-patrimonios-body"),
+      modalDetalhes: document.getElementById("modal-detalhes-patrimonio"),
+      btnFecharDetalhes: document.getElementById("btn-fechar-detalhes"),
+      detalheCodigo: document.getElementById("detalhe-codigo"),
+      detalheNome: document.getElementById("detalhe-nome"),
+      detalheCategoria: document.getElementById("detalhe-categoria"),
+      detalheTag: document.getElementById("detalhe-tag"),
+      detalheStatus: document.getElementById("detalhe-status"),
+      detalheDescricao: document.getElementById("detalhe-descricao"),
+      detalheCriadoEm: document.getElementById("detalhe-criado-em"),
+      detalheFoto: document.getElementById("detalhe-foto")
+    };
+
+    firebase.initializeApp(window.firebaseConfig);
+    const db = firebase.database();
+    const auth = firebase.auth();
+    const camposObrigatoriosPatrimonio = [
+      document.getElementById("codigo"),
+      document.getElementById("nome_objeto"),
+      refs.categoriaInput,
+      refs.tagRfidInput
+    ];
+
+    function normalizarTag(tag) {
+      return String(tag || "").trim().replace(/\s+/g, "").toUpperCase();
+    }
+
+    function formatarTag(tag) {
+      const limpa = normalizarTag(tag);
+      return limpa.replace(/(.{2})(?=.)/g, "$1 ").trim() || "--";
+    }
+
+    function formatarHoraLeitura(timestamp) {
+      const bruto = Number(timestamp || 0);
+      if (!bruto) return "--";
+      const emMilissegundos = bruto < 1000000000000 ? bruto * 1000 : bruto;
+      return new Date(emMilissegundos).toLocaleTimeString("pt-BR");
+    }
+
+    function normalizarNomePatrimonio(nome) {
+      return String(nome || "").trim().replace(/\s+/g, " ").toLowerCase();
+    }
+
+    function obterUsuariosLocais() {
+      try {
+        const dados = JSON.parse(localStorage.getItem("sistemaUsuarios") || "[]");
+        return Array.isArray(dados) ? dados : [];
+      } catch (erro) {
+        return [];
+      }
+    }
+
+    function tagPertenceAoAdmin(uidTag) {
+      const uidNormalizada = normalizarTag(uidTag);
+      if (!uidNormalizada) return false;
+      const usuarios = obterUsuariosLocais();
+      return usuarios.some((usuario) => {
+        if (String(usuario?.role || "").toLowerCase() !== "admin") return false;
+        return normalizarTag(usuario?.tag || "") === uidNormalizada;
+      });
+    }
+
+    function limparDestaqueCamposCadastro() {
+      [refs.nomeObjetoInput, refs.tagRfidInput].forEach((campo) => {
+        if (!campo) return;
+        campo.classList.remove("campo-invalido");
+      });
+    }
+
+    function mostrarAvisoCadastro(mensagem, campo, detalhe) {
+      limparDestaqueCamposCadastro();
+      if (campo) {
+        campo.classList.add("campo-invalido");
+      }
+      refs.movimentacaoMsg.className = "alerta-cadastro alerta-erro";
+      refs.movimentacaoMsg.textContent = detalhe ? `${mensagem} ${detalhe}` : mensagem;
+      if (campo && typeof campo.focus === "function") {
+        campo.focus();
+        campo.scrollIntoView({ behavior: "smooth", block: "center" });
+      }
+      window.alert(refs.movimentacaoMsg.textContent);
+    }
+
+    function mostrarSucessoCadastro(mensagem) {
+      limparDestaqueCamposCadastro();
+      refs.movimentacaoMsg.className = "alerta-cadastro alerta-sucesso";
+      refs.movimentacaoMsg.textContent = mensagem;
+    }
+
+    function gerarUidSistema() {
+      const base = String(sessao?.email || "usuario_local")
+        .trim()
+        .toLowerCase()
+        .replace(/[^a-z0-9]/g, "_");
+      return `usr_${base || "usuario"}`;
+    }
+
+    function atualizarCardLeitura(leitura) {
+      refs.uidLida.textContent = formatarTag(leitura?.uid);
+      refs.leituraTipo.textContent = String(leitura?.tipo || "--");
+      refs.leituraPatrimonio.textContent = leitura?.patrimonioNome || "Nenhum patrimônio identificado";
+      refs.leituraCodigo.textContent = leitura?.patrimonioCodigo || "--";
+      refs.leituraStatus.textContent = leitura?.status || "--";
+      refs.leituraHorario.textContent = formatarHoraLeitura(leitura?.timestamp);
+    }
+
+    async function garantirUsuarioFirebase() {
+      const uidSistema = gerarUidSistema();
+      try {
+        if (!auth.currentUser || !auth.currentUser.uid) {
+          await auth.signInAnonymously();
+        }
+      } catch (erro) {
+      }
+
+      estado.firebaseUid = uidSistema;
+      localStorage.setItem(FIREBASE_UID_FALLBACK_KEY, uidSistema);
+      return uidSistema;
+    }
+
+    async function registrarPerfilSistema() {
+      const uid = await garantirUsuarioFirebase();
+      const emailSessao = sessao?.email || "usuario_local";
+      await db.ref(`usuarios_sistema/${uid}`).update({
+        email: emailSessao,
+        nome: emailSessao.split("@")[0] || "usuario",
+        role: sessao?.role || "comum",
+        atualizado_em: Date.now()
+      });
+    }
+
+    function renderTabela() {
+      if (!estado.patrimonios.length) {
+        refs.tabelaBody.innerHTML = '<tr><td colspan="6" class="tabela-vazia">Nenhum patrimônio cadastrado.</td></tr>';
+        return;
+      }
+
+      refs.tabelaBody.innerHTML = estado.patrimonios.map((item) => {
+        const classeStatus = item.status_atual === "fora" ? "status-fora" : "status-dentro";
+        const fotoHtml = item.foto_data_url
+          ? `<img src="${item.foto_data_url}" alt="Foto de ${item.nome}" class="foto-mini">`
+          : "--";
+        return `
+          <tr>
+            <td>${item.codigo || "--"}</td>
+            <td>${item.nome || "--"}</td>
+            <td>${formatarTag(item.uid_tag || "")}</td>
+            <td>${fotoHtml}</td>
+            <td><span class="status ${classeStatus}">${item.status_atual || "dentro"}</span></td>
+            <td>
+              <div class="acoes-tabela">
+                <button type="button" class="btn btn-editar btn-detalhes-patrimonio" data-id="${item.id || ""}">Detalhes</button>
+                ${sessao?.role === "admin"
+                  ? `<button type="button" class="btn btn-excluir btn-excluir-patrimonio" data-id="${item.id || ""}" data-tag="${item.uid_tag || ""}">Excluir</button>`
+                  : ""}
+              </div>
+            </td>
+          </tr>
+        `;
+      }).join("");
+
+    }
+
+    function abrirDetalhesPatrimonio(patrimonioId) {
+      const patrimonio = estado.patrimonios.find((item) => item.id === patrimonioId);
+      if (!patrimonio) return;
+
+      refs.detalheCodigo.textContent = patrimonio.codigo || "--";
+      refs.detalheNome.textContent = patrimonio.nome || "--";
+      refs.detalheCategoria.textContent = patrimonio.categoria || "--";
+      refs.detalheTag.textContent = formatarTag(patrimonio.uid_tag || "");
+      refs.detalheStatus.textContent = patrimonio.status_atual || "--";
+      refs.detalheDescricao.textContent = patrimonio.descricao || "--";
+      refs.detalheCriadoEm.textContent = patrimonio.criado_em ? new Date(patrimonio.criado_em).toLocaleString("pt-BR") : "--";
+      refs.detalheFoto.src = patrimonio.foto_data_url || "";
+      refs.detalheFoto.style.display = patrimonio.foto_data_url ? "block" : "none";
+      refs.modalDetalhes.style.display = "block";
+    }
+
+    function coletarRegistrosEmArvore(base, coletor, caminho = "") {
+      if (!base || typeof base !== "object") return;
+      Object.entries(base).forEach(([chave, valor]) => {
+        const caminhoAtual = caminho ? `${caminho}/${chave}` : chave;
+        if (valor && typeof valor === "object" && !Array.isArray(valor)) {
+          coletor(chave, valor, caminhoAtual);
+          coletarRegistrosEmArvore(valor, coletor, caminhoAtual);
+        }
+      });
+    }
+
+    function extrairPatrimonios(dadosPatrimonios) {
+      const lista = [];
+      const mapa = new Map();
+
+      coletarRegistrosEmArvore(dadosPatrimonios || {}, (chave, valor) => {
+        if (!valor.uid_tag && !valor.codigo && !valor.nome) return;
+        const id = String(valor.id || chave || "");
+        if (!id) return;
+        if (mapa.has(id)) return;
+        const item = { ...valor, id };
+        mapa.set(id, item);
+        lista.push(item);
+      });
+
+      return lista.sort((a, b) => Number(b.criado_em || 0) - Number(a.criado_em || 0));
+    }
+
+    function extrairLeiturasRFID(dadosLeituras) {
+      const lista = [];
+      coletarRegistrosEmArvore(dadosLeituras || {}, (_chave, valor) => {
+        if (!valor) return;
+        const uid = String(valor.uid || valor.uid_tag || "");
+        if (!uid) return;
+        const ehUltrassonico = uid.toUpperCase() === "SENSOR_ULTRASSONICO"
+          || String(valor.tipo_tag || "").toLowerCase() === "ultrassonico";
+        if (ehUltrassonico) return;
+        lista.push(valor);
+      });
+      return lista;
+    }
+
+    function observarPatrimonios() {
+      db.ref("patrimonios")
+        .on("value", (snapshot) => {
+          estado.patrimonios = extrairPatrimonios(snapshot.val() || {});
+          renderTabela();
+        });
+    }
+
+    function observarLeiturasRFID() {
+      db.ref("leituras_recentes")
+        .limitToLast(20)
+        .on("value", (snapshot) => {
+          const leituras = extrairLeiturasRFID(snapshot.val() || {});
+          let ultimaLeitura = null;
+
+          leituras.forEach((item) => {
+            if (!ultimaLeitura || Number(item.timestamp || 0) > Number(ultimaLeitura.timestamp || 0)) {
+              ultimaLeitura = item;
+            }
+          });
+
+          if (!ultimaLeitura) return;
+
+          const uidLido = ultimaLeitura.uid || ultimaLeitura.uid_tag || "";
+          const patrimonioLocal = buscarPatrimonioPorTag(uidLido);
+          const tipoTagOriginal = String(ultimaLeitura.tipo_tag || "").toLowerCase();
+          const tipoLeitura = patrimonioLocal
+            ? "patrimonio"
+            : (tipoTagOriginal && tipoTagOriginal !== "ultrassonico" ? tipoTagOriginal : "desconhecida");
+
+          atualizarCardLeitura({
+            uid: uidLido,
+            tipo: tipoLeitura,
+            patrimonioNome: ultimaLeitura.patrimonio_nome || patrimonioLocal?.nome || "Nenhum patrimônio identificado",
+            patrimonioCodigo: ultimaLeitura.patrimonio_codigo || patrimonioLocal?.codigo || "--",
+            status: ultimaLeitura.objeto_detectado ? "detectado" : "aguardando",
+            timestamp: Number(ultimaLeitura.timestamp || Date.now())
+          });
+
+          if (sessao?.role === "admin" && refs.tagRfidInput) {
+            refs.tagRfidInput.value = formatarTag(uidLido);
+          }
+          if (sessao?.role === "admin" && refs.tagMovInput) {
+            refs.tagMovInput.value = formatarTag(uidLido);
+          }
+        }, () => {
+          refs.movimentacaoMsg.textContent = "Realtime indisponível. Ativando leitura por atualização periódica.";
+        });
+    }
+
+    function extrairUltimaLeituraRFID(leituras) {
+      const valores = extrairLeiturasRFID(leituras || {});
+      let ultimaLeitura = null;
+
+      valores.forEach((item) => {
+        if (!ultimaLeitura || Number(item.timestamp || 0) > Number(ultimaLeitura.timestamp || 0)) {
+          ultimaLeitura = item;
+        }
+      });
+
+      return ultimaLeitura;
+    }
+
+    function montarCardDaLeitura(ultimaLeitura) {
+      if (!ultimaLeitura) return;
+      const uidLido = ultimaLeitura.uid || ultimaLeitura.uid_tag || "";
+      const patrimonioLocal = buscarPatrimonioPorTag(uidLido);
+      const tipoTagOriginal = String(ultimaLeitura.tipo_tag || "").toLowerCase();
+      const tipoLeitura = patrimonioLocal
+        ? "patrimonio"
+        : (tipoTagOriginal && tipoTagOriginal !== "ultrassonico" ? tipoTagOriginal : "desconhecida");
+
+      atualizarCardLeitura({
+        uid: uidLido,
+        tipo: tipoLeitura,
+        patrimonioNome: ultimaLeitura.patrimonio_nome || patrimonioLocal?.nome || "Nenhum patrimônio identificado",
+        patrimonioCodigo: ultimaLeitura.patrimonio_codigo || patrimonioLocal?.codigo || "--",
+        status: ultimaLeitura.objeto_detectado ? "detectado" : "aguardando",
+        timestamp: Number(ultimaLeitura.timestamp || Date.now())
+      });
+
+      if (sessao?.role === "admin" && refs.tagRfidInput) {
+        refs.tagRfidInput.value = formatarTag(uidLido);
+      }
+      if (sessao?.role === "admin" && refs.tagMovInput) {
+        refs.tagMovInput.value = formatarTag(uidLido);
+      }
+    }
+
+    async function atualizarLeituraPorPolling() {
+      if (!FIREBASE_DB_BASE_URL) return;
+      try {
+        const resposta = await fetch(`${FIREBASE_DB_BASE_URL}/leituras_recentes.json?ts=${Date.now()}`);
+        if (!resposta.ok) return;
+        const leituras = await resposta.json();
+        const ultimaLeitura = extrairUltimaLeituraRFID(leituras || {});
+        if (!ultimaLeitura) return;
+
+        montarCardDaLeitura(ultimaLeitura);
+      } catch (erro) {
+      }
+    }
+
+    async function atualizarLeituraPorAcessos() {
+      if (!FIREBASE_DB_BASE_URL) return;
+      try {
+        const resposta = await fetch(`${FIREBASE_DB_BASE_URL}/acessos.json?ts=${Date.now()}`);
+        if (!resposta.ok) return;
+        const acessos = await resposta.json();
+        const ultimaLeitura = extrairUltimaLeituraRFID(acessos || {});
+        if (!ultimaLeitura) return;
+        montarCardDaLeitura(ultimaLeitura);
+      } catch (erro) {
+      }
+    }
+
+    function buscarPatrimonioPorTag(uidTag) {
+      const uidNormalizada = normalizarTag(uidTag);
+      return estado.patrimonios.find((item) => normalizarTag(item.uid_tag) === uidNormalizada) || null;
+    }
+
+    function lerArquivoComoDataUrl(arquivo) {
+      return new Promise((resolve) => {
+        if (!arquivo || !arquivo.name) {
+          resolve("");
+          return;
+        }
+        const reader = new FileReader();
+        reader.onload = () => resolve(String(reader.result || ""));
+        reader.onerror = () => resolve("");
+        reader.readAsDataURL(arquivo);
+      });
+    }
+
+    function validarCamposObrigatoriosPatrimonio() {
+      let temErro = false;
+      camposObrigatoriosPatrimonio.forEach((input) => {
+        const invalido = !String(input.value || "").trim() || !input.checkValidity();
+        if (invalido) temErro = true;
+      });
+      return !temErro;
+    }
+
+    async function cadastrarPatrimonio(event) {
+      event.preventDefault();
+      refs.movimentacaoMsg.className = "";
+      limparDestaqueCamposCadastro();
+      if (!validarCamposObrigatoriosPatrimonio()) {
+        refs.movimentacaoMsg.textContent = "Preencha os campos obrigatórios para salvar o patrimônio.";
+        return;
+      }
+      try {
+        const uidUsuario = await garantirUsuarioFirebase();
+        const formData = new FormData(refs.formPatrimonio);
+        const fotoDataUrl = await lerArquivoComoDataUrl(formData.get("foto"));
+        const uidTag = normalizarTag(formData.get("tag_rfid"));
+        const nomePatrimonio = String(formData.get("nome_objeto") || "").trim();
+        const limiteUltrassonico = Number(String(formData.get("limite") || "").replace(/[^\d.,-]/g, "").replace(",", ".") || 0);
+
+        if (!uidTag) {
+          refs.movimentacaoMsg.textContent = "Informe a tag RFID do patrimônio.";
+          return;
+        }
+
+        const patrimonioComMesmoNome = estado.patrimonios.find((item) =>
+          normalizarNomePatrimonio(item?.nome || "") === normalizarNomePatrimonio(nomePatrimonio)
+        );
+        if (patrimonioComMesmoNome) {
+          mostrarAvisoCadastro(
+            "Cadastro bloqueado: já existe patrimônio com esse nome.",
+            refs.nomeObjetoInput,
+            `Nome já cadastrado: "${patrimonioComMesmoNome.nome || nomePatrimonio}".`
+          );
+          return;
+        }
+
+        if (tagPertenceAoAdmin(uidTag)) {
+          mostrarAvisoCadastro(
+            "Cadastro bloqueado: tag reservada para usuário admin.",
+            refs.tagRfidInput,
+            `Tag detectada: ${formatarTag(uidTag)}.`
+          );
+          return;
+        }
+
+        const patrimonioRef = db.ref("patrimonios").push();
+        const patrimonioId = patrimonioRef.key;
+        const novoPatrimonio = {
+          id: patrimonioId,
+          codigo: String(formData.get("codigo") || "").trim(),
+          nome: nomePatrimonio,
+          categoria: String(formData.get("categoria") || "").trim(),
+          uid_tag: uidTag,
+          usuario_uid: uidUsuario,
+          localizacao_padrao: "--",
+          localizacao_atual: "--",
+          status_atual: "dentro",
+          descricao: String(formData.get("descricao") || "").trim(),
+          limite_ultrassonico: limiteUltrassonico > 0 ? limiteUltrassonico : 0,
+          foto_data_url: fotoDataUrl,
+          criado_em: Date.now()
+        };
+
+        const tagPatrimonioPayload = {
+          patrimonio_id: patrimonioId,
+          patrimonio_nome: novoPatrimonio.nome,
+          patrimonio_codigo: novoPatrimonio.codigo,
+          vinculado_ao_usuario: uidUsuario
+        };
+
+        await Promise.all([
+          db.ref(`patrimonios/${patrimonioId}`).set(novoPatrimonio),
+          db.ref(`tags_patrimonio/${uidTag}`).set(tagPatrimonioPayload)
+        ]);
+        refs.formPatrimonio.reset();
+        refs.tagMovInput.value = formatarTag(uidTag);
+        atualizarCardLeitura({
+          uid: uidTag,
+          tipo: "patrimonio",
+          patrimonioNome: novoPatrimonio.nome,
+          patrimonioCodigo: novoPatrimonio.codigo,
+          status: "cadastrado",
+          timestamp: Date.now()
+        });
+        mostrarSucessoCadastro("Patrimônio salvo no Firebase com sucesso.");
+      } catch (erro) {
+        refs.movimentacaoMsg.className = "alerta-cadastro alerta-erro";
+        refs.movimentacaoMsg.textContent = erro?.message || "Erro ao salvar patrimônio no Firebase.";
+      }
+    }
+
+    async function confirmarMovimentacao(tipo) {
+      try {
+        const uidUsuario = await garantirUsuarioFirebase();
+        const uidTag = normalizarTag(refs.tagMovInput.value || refs.tagRfidInput?.value);
+        if (!uidTag) {
+          refs.movimentacaoMsg.textContent = "Digite a tag RFID para confirmar a movimentação.";
+          return;
+        }
+
+        const patrimonio = buscarPatrimonioPorTag(uidTag);
+        if (!patrimonio) {
+          refs.movimentacaoMsg.textContent = "Tag não encontrada entre os patrimônios cadastrados.";
+          return;
+        }
+
+        if (tipo === "entrada") {
+          const limiteSala = await obterLimitePermitidoPatrimonio(patrimonio);
+          if (limiteSala > 0) {
+            const distanciaAtual = await obterDistanciaUltrassonicoAtual();
+            if (distanciaAtual > limiteSala) {
+              refs.movimentacaoMsg.textContent = `Entrada bloqueada: distância atual (${distanciaAtual.toFixed(1)} cm) excede o limite da sala (${limiteSala} cm).`;
+              return;
+            }
+          }
+        }
+
+        await db.ref("movimentacoes").push({
+          patrimonio_id: patrimonio.id,
+          patrimonio_nome: patrimonio.nome,
+          patrimonio_codigo: patrimonio.codigo,
+          uid_tag: uidTag,
+          usuario_uid: uidUsuario,
+          tipo,
+          timestamp: Date.now(),
+          confirmado_por: sessao?.email || "usuario"
+        });
+
+        await db.ref(`patrimonios/${patrimonio.id}`).update({
+          status_atual: tipo === "entrada" ? "dentro" : "fora",
+          atualizado_em: Date.now()
+        });
+
+        atualizarCardLeitura({
+          uid: uidTag,
+          tipo: "movimentacao",
+          patrimonioNome: patrimonio.nome,
+          patrimonioCodigo: patrimonio.codigo,
+          status: tipo === "entrada" ? "entrada confirmada" : "saida confirmada",
+          timestamp: Date.now()
+        });
+        refs.movimentacaoMsg.textContent = `Movimentação de ${tipo} salva no Firebase.`;
+      } catch (erro) {
+        refs.movimentacaoMsg.textContent = erro?.message || "Erro ao salvar movimentação no Firebase.";
+      }
+    }
+
+    async function obterDistanciaUltrassonicoAtual() {
+      const leituraUltraSnap = await db.ref("leituras_recentes/ultrassonico").once("value");
+      const leituraUltra = leituraUltraSnap.val() || {};
+      return Number(leituraUltra.distancia || 0);
+    }
+
+    async function obterLimitePermitidoPatrimonio(patrimonio) {
+      if (patrimonio?.sala_id_atual) {
+        const salaSnap = await db.ref(`salas/${estado.firebaseUid}/${patrimonio.sala_id_atual}`).once("value");
+        const sala = salaSnap.val() || {};
+        const limiteSala = Number(sala.limite_cm || 0);
+        if (limiteSala > 0) return limiteSala;
+      }
+      return Number(patrimonio?.limite_ultrassonico || 0);
+    }
+
+    async function excluirPatrimonio(patrimonioId, uidTag) {
+      if (!patrimonioId) return;
+      if (sessao?.role !== "admin") {
+        refs.movimentacaoMsg.textContent = "Somente administradores podem excluir patrimônios.";
+        return;
+      }
+      try {
+        const operacoes = [db.ref(`patrimonios/${patrimonioId}`).remove()];
+        if (uidTag) {
+          const tagNormalizada = normalizarTag(uidTag);
+          operacoes.push(db.ref(`tags_patrimonio/${tagNormalizada}`).remove());
+          operacoes.push(db.ref(`usuarios/${tagNormalizada}`).remove());
+        }
+
+        const salasVinculoSnap = await db.ref(`salas_patrimonios/${estado.firebaseUid}`).once("value");
+        const salasVinculo = salasVinculoSnap.val() || {};
+        Object.keys(salasVinculo).forEach((salaId) => {
+          operacoes.push(db.ref(`salas_patrimonios/${estado.firebaseUid}/${salaId}/${patrimonioId}`).remove());
+        });
+
+        await Promise.all(operacoes);
+        refs.modalDetalhes.style.display = "none";
+        refs.movimentacaoMsg.textContent = "Patrimônio excluído com sucesso.";
+      } catch (erro) {
+        refs.movimentacaoMsg.textContent = "Erro ao excluir patrimônio.";
+      }
+    }
+
+    async function iniciar() {
+      try {
+        await garantirUsuarioFirebase();
+        await registrarPerfilSistema();
+      } catch (erro) {
+        refs.movimentacaoMsg.textContent = "Conexão parcial com Firebase. O sistema continuará em modo compatível.";
+      }
+      observarPatrimonios();
+      observarLeiturasRFID();
+      setInterval(atualizarLeituraPorPolling, 2500);
+      setInterval(atualizarLeituraPorAcessos, 3200);
+      atualizarLeituraPorPolling();
+      atualizarLeituraPorAcessos();
+    }
+
+    if (sessao && sessao.role === "admin") {
+      refs.btnEntrando.addEventListener("click", () => confirmarMovimentacao("entrada"));
+      refs.btnSaindo.addEventListener("click", () => confirmarMovimentacao("saida"));
+      refs.formPatrimonio.addEventListener("submit", cadastrarPatrimonio);
+    }
+
+    refs.tabelaBody.addEventListener("click", (event) => {
+      const alvo = event.target;
+      if (!(alvo instanceof HTMLElement)) return;
+      if (alvo.classList.contains("btn-detalhes-patrimonio")) {
+        const patrimonioId = alvo.getAttribute("data-id") || "";
+        abrirDetalhesPatrimonio(patrimonioId);
+      } else if (alvo.classList.contains("btn-excluir-patrimonio")) {
+        if (sessao?.role !== "admin") return;
+        const patrimonioId = alvo.getAttribute("data-id") || "";
+        const uidTag = alvo.getAttribute("data-tag") || "";
+        const confirmou = window.confirm("Deseja realmente excluir este patrimônio?");
+        if (!confirmou) return;
+        excluirPatrimonio(patrimonioId, uidTag);
+      }
+    });
+
+    refs.btnFecharDetalhes.addEventListener("click", () => {
+      refs.modalDetalhes.style.display = "none";
+    });
+
+    camposObrigatoriosPatrimonio.forEach((input) => {
+      input.addEventListener("input", () => {
+        input.classList.remove("campo-invalido");
+        refs.movimentacaoMsg.className = "";
+        refs.movimentacaoMsg.textContent = "";
+      });
+    });
+
+    renderTabela();
+    iniciar();
+  </script>
+</body>
+</html>

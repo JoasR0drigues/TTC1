@@ -1,0 +1,33 @@
+{
+  "dependencies": {
+    "@capacitor/android": "^8.3.1",
+    "@capacitor/core": "^8.3.1",
+    "firebase": "^12.12.1"
+  },
+  "name": "codigo-novo",
+  "version": "1.0.0",
+  "description": "",
+  "main": "firebaseconfig.js",
+  "scripts": {
+    "dev": "npx -y firebase-tools@latest emulators:start --only hosting",
+    "deploy:hosting": "npx -y firebase-tools@latest deploy --only hosting",
+    "deploy:database": "npx -y firebase-tools@latest deploy --only database",
+    "deploy:all": "npx -y firebase-tools@latest deploy --only hosting,database",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/JoasR0drigues/TTC1.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "commonjs",
+  "bugs": {
+    "url": "https://github.com/JoasR0drigues/TTC1/issues"
+  },
+  "homepage": "https://github.com/JoasR0drigues/TTC1#readme",
+  "devDependencies": {
+    "@capacitor/cli": "^8.3.1"
+  }
+}

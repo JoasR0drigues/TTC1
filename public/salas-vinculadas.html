@@ -1,0 +1,579 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Salas Vinculadas</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <header class="topo">
+    <div class="logo-texto">
+      <span class="logo-destaque">Proteção</span> Patrimonial RFID
+    </div>
+
+   <nav class="menu">
+    <a href="salas-vinculadas.html" class="ativo">Salas Vinculadas</a>
+    <a href="Patrimônios.html">Patrimônios</a>
+    <a href="historico.html">Histórico</a>
+    <a href="monitoramento-ultrassonico.html">Monitoramento</a>
+    </nav>
+  </header>
+
+  <main class="salas-layout">
+    <section class="card sala-card">
+      <h2>Cadastrar local e sala</h2>
+      <p class="sala-subtitulo">
+        Crie os ambientes para organizar os patrimônios por local e sala.
+      </p>
+
+
+
+      <form class="form-sala" id="form-criar-sala">
+        <div class="campo">
+          <label for="nome-local">Nome do local <span class="asterisco-obrigatorio">*</span></label>
+          
+          <input type="text" id="nome-local" name="nome-local" placeholder="Ex: UEG" required>
+        </div>
+
+        <div class="campo">
+          <label for="sala-especifica">Sala específica <span class="asterisco-obrigatorio">*</span></label>
+          <input type="text" id="sala-especifica" name="sala-especifica" placeholder="Ex: Sala-001" required>
+        </div>
+
+        <div class="campo">
+          <label for="limite-sala">Limite da sala (em cm) <span class="asterisco-obrigatorio">*</span></label>
+          <input type="number" id="limite-sala" name="limite-sala" placeholder="Ex: 300" min="1" required>
+          <small>Informe a distância máxima para considerar que o patrimônio está dentro da sala.</small>
+        </div>
+
+        <div class="botoes">
+          <button type="submit" class="btn btn-primario" id="btn-salvar-sala">Criar sala</button>
+          <button type="button" class="btn btn-editar" id="btn-cancelar-edicao-sala" style="display:none;">Cancelar edição</button>
+        </div>
+        <p id="msg-sala-criada"></p>
+      </form>
+    </section>
+
+    <section class="card sala-card">
+      <h2>Salas vinculadas</h2>
+
+      <div class="campo">
+        <label for="buscar-sala">Buscar sala</label>
+        <input type="text" id="buscar-sala" name="buscar-sala" placeholder="Ex: Bloco A ou Sala 01">
+      </div>
+
+      <div class="tabela-wrapper">
+        <table>
+          <thead>
+            <tr>
+              <th>Local</th>
+              <th>Sala</th>
+              <th>Limite (cm)</th>
+              <th>Ações</th>
+            </tr>
+          </thead>
+          <tbody id="tabela-salas-body">
+            <tr>
+              <td colspan="4" class="tabela-vazia">Nenhuma sala encontrada.</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <section class="card sala-card">
+      <h2>Patrimônios da sala</h2>
+      <p class="sala-subtitulo" id="subtitulo-sala-patrimonios">Selecione uma sala para exibir patrimônios vinculados.</p>
+      <div class="campo">
+        <label for="sala-visualizacao">Sala para visualizar patrimônios</label>
+        <select id="sala-visualizacao" name="sala-visualizacao">
+          <option value="">Selecione uma sala</option>
+        </select>
+      </div>
+      <form class="form-sala" id="form-vincular-patrimonio-sala">
+        <div class="campo">
+          <label for="patrimonio-vinculo-sala">Patrimônio para vincular</label>
+          <select id="patrimonio-vinculo-sala" name="patrimonio-vinculo-sala">
+            <option value="">Selecione um patrimônio</option>
+          </select>
+        </div>
+        <div class="botoes">
+          <button type="submit" class="btn btn-vincular">Vincular na sala selecionada</button>
+        </div>
+      </form>
+
+      <div class="tabela-wrapper tabela-sala-wrapper">
+        <table class="tabela-sala">
+          <thead>
+            <tr>
+              <th>Código</th>
+              <th>Patrimônio</th>
+              <th>Status</th>
+              <th>Localização</th>
+              <th>Ações</th>
+            </tr>
+          </thead>
+          <tbody id="tabela-patrimonios-sala-body">
+            <tr>
+              <td colspan="5" class="tabela-vazia">Nenhum patrimônio vinculado.</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+  </main>
+
+  <section id="modal-detalhes-sala" class="card" style="display:none; position: fixed; inset: 8% 10%; z-index: 999; overflow-y: auto;">
+    <div class="botoes" style="justify-content: flex-end;">
+      <button type="button" class="btn btn-excluir" id="btn-fechar-detalhes-sala">Fechar</button>
+    </div>
+    <h2>Detalhes do patrimônio</h2>
+    <p><strong>Código:</strong> <span id="detalhe-sala-codigo">--</span></p>
+    <p><strong>Nome:</strong> <span id="detalhe-sala-nome">--</span></p>
+    <p><strong>Categoria:</strong> <span id="detalhe-sala-categoria">--</span></p>
+    <p><strong>Tag RFID:</strong> <span id="detalhe-sala-tag">--</span></p>
+    <p><strong>Status:</strong> <span id="detalhe-sala-status">--</span></p>
+    <p><strong>Descrição:</strong> <span id="detalhe-sala-descricao">--</span></p>
+    <p><strong>Localização atual:</strong> <span id="detalhe-sala-localizacao">--</span></p>
+    <div style="margin-top: 12px;">
+      <img id="detalhe-sala-foto" alt="Foto do patrimônio" style="width:100%; max-height:480px; object-fit:contain; border-radius:12px; border:1px solid #ddd6f3; background:#fff;">
+    </div>
+  </section>
+
+  <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-database-compat.js"></script>
+  <script src="firebaseconfig.js"></script>
+  <script src="auth.js"></script>
+  <script>
+    const sessao = AuthApp.protegerPagina({ allowedRoles: ["admin"] });
+    firebase.initializeApp(window.firebaseConfig);
+
+    const auth = firebase.auth();
+    const db = firebase.database();
+
+    const formCriarSala = document.getElementById("form-criar-sala");
+    const msgSalaCriada = document.getElementById("msg-sala-criada");
+    const nomeLocalInput = document.getElementById("nome-local");
+    const nomeSalaInput = document.getElementById("sala-especifica");
+    const limiteSalaInput = document.getElementById("limite-sala");
+    const btnSalvarSala = document.getElementById("btn-salvar-sala");
+    const btnCancelarEdicaoSala = document.getElementById("btn-cancelar-edicao-sala");
+    const salaVisualizacao = document.getElementById("sala-visualizacao");
+    const buscarSalaInput = document.getElementById("buscar-sala");
+    const tabelaSalasBody = document.getElementById("tabela-salas-body");
+    const tabelaPatrimoniosSalaBody = document.getElementById("tabela-patrimonios-sala-body");
+    const subtituloSalaPatrimonios = document.getElementById("subtitulo-sala-patrimonios");
+    const formVincularPatrimonioSala = document.getElementById("form-vincular-patrimonio-sala");
+    const patrimonioVinculoSala = document.getElementById("patrimonio-vinculo-sala");
+    const modalDetalhesSala = document.getElementById("modal-detalhes-sala");
+    const btnFecharDetalhesSala = document.getElementById("btn-fechar-detalhes-sala");
+    const detalheSalaCodigo = document.getElementById("detalhe-sala-codigo");
+    const detalheSalaNome = document.getElementById("detalhe-sala-nome");
+    const detalheSalaCategoria = document.getElementById("detalhe-sala-categoria");
+    const detalheSalaTag = document.getElementById("detalhe-sala-tag");
+    const detalheSalaStatus = document.getElementById("detalhe-sala-status");
+    const detalheSalaDescricao = document.getElementById("detalhe-sala-descricao");
+    const detalheSalaLocalizacao = document.getElementById("detalhe-sala-localizacao");
+    const detalheSalaFoto = document.getElementById("detalhe-sala-foto");
+    const camposObrigatoriosCriarSala = [
+      nomeLocalInput,
+      nomeSalaInput,
+      limiteSalaInput
+    ];
+
+    const estado = {
+      uid: "",
+      salas: [],
+      patrimonios: [],
+      salaEmEdicaoId: ""
+    };
+
+    function gerarUidSistema() {
+      const base = String(sessao?.email || "usuario_local")
+        .trim()
+        .toLowerCase()
+        .replace(/[^a-z0-9]/g, "_");
+      return `usr_${base || "usuario"}`;
+    }
+
+    function renderSelectSalas() {
+      const visualizacaoAtual = salaVisualizacao.value;
+      const optionsHtml = '<option value="">Selecione uma sala</option>' +
+        estado.salas.map((sala) => `<option value="${sala.id}">${sala.nome_local} - ${sala.nome_sala}</option>`).join("");
+      salaVisualizacao.innerHTML = optionsHtml;
+      if (visualizacaoAtual) {
+        salaVisualizacao.value = visualizacaoAtual;
+      }
+    }
+
+    function renderSelectPatrimonios() {
+      if (!patrimonioVinculoSala) return;
+      const selecionadoAtual = patrimonioVinculoSala.value;
+      patrimonioVinculoSala.innerHTML = '<option value="">Selecione um patrimônio</option>'
+        + estado.patrimonios.map((item) => `<option value="${item.id || ""}">${item.nome || "--"} - ${item.codigo || "--"}</option>`).join("");
+      if (selecionadoAtual) {
+        patrimonioVinculoSala.value = selecionadoAtual;
+      }
+    }
+
+    function renderTabelaSalas() {
+      const filtro = (buscarSalaInput.value || "").trim().toLowerCase();
+      const lista = estado.salas.filter((item) => {
+        const texto = `${item.nome_local} ${item.nome_sala}`.toLowerCase();
+        return texto.includes(filtro);
+      });
+
+      if (!lista.length) {
+        tabelaSalasBody.innerHTML = '<tr><td colspan="4" class="tabela-vazia">Nenhuma sala encontrada.</td></tr>';
+        return;
+      }
+
+      tabelaSalasBody.innerHTML = lista.map((sala) => `
+        <tr>
+          <td>${sala.nome_local}</td>
+          <td>${sala.nome_sala}</td>
+          <td>${sala.limite_cm || "--"}</td>
+          <td>
+            <div class="acoes-tabela">
+              <button type="button" class="btn btn-editar btn-editar-sala-linha" data-id="${sala.id}">Editar</button>
+              <button type="button" class="btn btn-excluir btn-excluir-sala-linha" data-id="${sala.id}">Excluir</button>
+            </div>
+          </td>
+        </tr>
+      `).join("");
+    }
+
+    function atualizarInterfaceEdicaoSala() {
+      const emEdicao = !!estado.salaEmEdicaoId;
+      if (btnSalvarSala) {
+        btnSalvarSala.textContent = emEdicao ? "Salvar edição" : "Criar sala";
+      }
+      if (btnCancelarEdicaoSala) {
+        btnCancelarEdicaoSala.style.display = emEdicao ? "inline-flex" : "none";
+      }
+    }
+
+    function limparFormularioSala() {
+      formCriarSala.reset();
+      estado.salaEmEdicaoId = "";
+      atualizarInterfaceEdicaoSala();
+    }
+
+    function iniciarEdicaoSala(salaId) {
+      const sala = estado.salas.find((item) => item.id === salaId);
+      if (!sala) return;
+      estado.salaEmEdicaoId = salaId;
+      nomeLocalInput.value = sala.nome_local || "";
+      nomeSalaInput.value = sala.nome_sala || "";
+      limiteSalaInput.value = sala.limite_cm || "";
+      atualizarInterfaceEdicaoSala();
+      msgSalaCriada.textContent = "Editando sala selecionada.";
+    }
+
+    async function atualizarPatrimoniosDaSala(salaId, localizacao, limite) {
+      const vinculosSnap = await db.ref(`salas_patrimonios/${estado.uid}/${salaId}`).once("value");
+      const vinculos = vinculosSnap.val() || {};
+      const patrimonioIds = Object.keys(vinculos);
+      if (!patrimonioIds.length) return;
+      await Promise.all(patrimonioIds.map((patrimonioId) =>
+        db.ref(`patrimonios/${patrimonioId}`).update({
+          localizacao_padrao: localizacao,
+          localizacao_atual: localizacao,
+          atualizado_em: Date.now(),
+          limite_ultrassonico: Number(limite || 0)
+        })
+      ));
+    }
+
+    function renderPatrimoniosDaSala(vinculos) {
+      const salaId = salaVisualizacao.value;
+      if (!salaId) {
+        tabelaPatrimoniosSalaBody.innerHTML = '<tr><td colspan="5" class="tabela-vazia">Nenhum patrimônio vinculado.</td></tr>';
+        subtituloSalaPatrimonios.textContent = "Selecione uma sala para exibir patrimônios vinculados.";
+        return;
+      }
+
+      const sala = estado.salas.find((item) => item.id === salaId);
+      subtituloSalaPatrimonios.textContent = sala
+        ? `Patrimônios vinculados em ${sala.nome_local} - ${sala.nome_sala}.`
+        : "Patrimônios vinculados.";
+
+      const ids = Object.keys(vinculos || {});
+      const itens = estado.patrimonios.filter((item) => ids.includes(item.id));
+      if (!itens.length) {
+        tabelaPatrimoniosSalaBody.innerHTML = '<tr><td colspan="5" class="tabela-vazia">Nenhum patrimônio vinculado.</td></tr>';
+        return;
+      }
+
+      tabelaPatrimoniosSalaBody.innerHTML = itens.map((item) => `
+        <tr>
+          <td>${item.codigo || "--"}</td>
+          <td>${item.nome || "--"}</td>
+          <td><span class="status ${item.status_atual === "fora" ? "status-fora" : "status-dentro"}">${item.status_atual || "dentro"}</span></td>
+          <td>${sala ? `${sala.nome_local} - ${sala.nome_sala}` : "--"}</td>
+          <td>
+            <div class="acoes-tabela">
+              <button type="button" class="btn btn-editar btn-detalhes-patrimonio-sala" data-id="${item.id || ""}">Detalhes</button>
+              <button type="button" class="btn btn-excluir btn-excluir-patrimonio-sala" data-id="${item.id || ""}">Excluir</button>
+            </div>
+          </td>
+        </tr>
+      `).join("");
+    }
+
+    function formatarTag(tag) {
+      const limpa = String(tag || "").replace(/\s+/g, "").toUpperCase();
+      return limpa ? limpa.replace(/(.{2})(?=.)/g, "$1 ").trim() : "--";
+    }
+
+    function abrirDetalhesPatrimonioSala(patrimonioId) {
+      const patrimonio = estado.patrimonios.find((item) => item.id === patrimonioId);
+      if (!patrimonio) return;
+      detalheSalaCodigo.textContent = patrimonio.codigo || "--";
+      detalheSalaNome.textContent = patrimonio.nome || "--";
+      detalheSalaCategoria.textContent = patrimonio.categoria || "--";
+      detalheSalaTag.textContent = formatarTag(patrimonio.uid_tag || "");
+      detalheSalaStatus.textContent = patrimonio.status_atual || "--";
+      detalheSalaDescricao.textContent = patrimonio.descricao || "--";
+      detalheSalaLocalizacao.textContent = patrimonio.localizacao_atual || "--";
+      detalheSalaFoto.src = patrimonio.foto_data_url || "";
+      detalheSalaFoto.style.display = patrimonio.foto_data_url ? "block" : "none";
+      modalDetalhesSala.style.display = "block";
+    }
+
+    async function excluirPatrimonioDaSala(patrimonioId) {
+      const salaId = salaVisualizacao.value;
+      if (!patrimonioId || !salaId) return;
+      const confirmou = window.confirm("Deseja excluir este patrimônio desta sala?");
+      if (!confirmou) return;
+
+      await db.ref(`salas_patrimonios/${estado.uid}/${salaId}/${patrimonioId}`).remove();
+      const patrimonioRef = db.ref(`patrimonios/${patrimonioId}`);
+      const patrimonioSnap = await patrimonioRef.once("value");
+      const patrimonio = patrimonioSnap.val() || {};
+      if (patrimonio.sala_id_atual === salaId || patrimonio.sala_id_padrao === salaId) {
+        await patrimonioRef.update({
+          localizacao_atual: "--",
+          localizacao_padrao: "--",
+          sala_id_atual: "",
+          sala_id_padrao: "",
+          atualizado_em: Date.now()
+        });
+      }
+      msgSalaCriada.textContent = "Patrimônio removido da sala com sucesso.";
+      observarVinculosDaSala();
+    }
+
+    function carregarSalas() {
+      db.ref(`salas/${estado.uid}`).on("value", (snapshot) => {
+        const dados = snapshot.val() || {};
+        estado.salas = Object.entries(dados).map(([id, valor]) => ({ id, ...valor }));
+        renderSelectSalas();
+        renderTabelaSalas();
+      });
+    }
+
+    function carregarPatrimonios() {
+      db.ref("patrimonios").on("value", (snapshot) => {
+        const dados = snapshot.val() || {};
+        const mapa = new Map();
+        coletarRegistrosEmArvore(dados, (chave, valor) => {
+          if (!valor.uid_tag && !valor.nome && !valor.codigo) return;
+          const id = String(valor.id || chave || "");
+          if (!id || mapa.has(id)) return;
+          mapa.set(id, { ...valor, id });
+        });
+        estado.patrimonios = Array.from(mapa.values());
+        renderSelectPatrimonios();
+        observarVinculosDaSala();
+      });
+    }
+
+    function coletarRegistrosEmArvore(base, coletor, caminho = "") {
+      if (!base || typeof base !== "object") return;
+      Object.entries(base).forEach(([chave, valor]) => {
+        const caminhoAtual = caminho ? `${caminho}/${chave}` : chave;
+        if (valor && typeof valor === "object" && !Array.isArray(valor)) {
+          coletor(chave, valor, caminhoAtual);
+          coletarRegistrosEmArvore(valor, coletor, caminhoAtual);
+        }
+      });
+    }
+
+    function observarVinculosDaSala() {
+      const salaId = salaVisualizacao.value;
+      if (!salaId) {
+        renderPatrimoniosDaSala({});
+        return;
+      }
+      db.ref(`salas_patrimonios/${estado.uid}/${salaId}`).on("value", (snapshot) => {
+        renderPatrimoniosDaSala(snapshot.val() || {});
+      });
+    }
+
+    function validarCamposObrigatoriosCriarSala() {
+      let temErro = false;
+      camposObrigatoriosCriarSala.forEach((input) => {
+        const invalido = !input.value.trim() || !input.checkValidity();
+        if (invalido) temErro = true;
+      });
+      return !temErro;
+    }
+
+    formCriarSala.addEventListener("submit", async (event) => {
+      event.preventDefault();
+      if (!validarCamposObrigatoriosCriarSala()) {
+        msgSalaCriada.textContent = "Preencha os campos obrigatórios para continuar.";
+        return;
+      }
+      const nomeLocal = nomeLocalInput.value.trim();
+      const nomeSala = nomeSalaInput.value.trim();
+      const limite = Number(limiteSalaInput.value || 0);
+      const localizacao = `${nomeLocal} - ${nomeSala}`;
+
+      if (estado.salaEmEdicaoId) {
+        const salaId = estado.salaEmEdicaoId;
+        await db.ref(`salas/${estado.uid}/${salaId}`).update({
+          nome_local: nomeLocal,
+          nome_sala: nomeSala,
+          limite_cm: limite,
+          atualizado_em: Date.now()
+        });
+        await atualizarPatrimoniosDaSala(salaId, localizacao, limite);
+        msgSalaCriada.textContent = "Sala atualizada com sucesso.";
+        limparFormularioSala();
+      } else {
+        const salaRef = db.ref(`salas/${estado.uid}`).push();
+        await salaRef.set({
+          nome_local: nomeLocal,
+          nome_sala: nomeSala,
+          limite_cm: limite,
+          criado_em: Date.now()
+        });
+
+        msgSalaCriada.textContent = "Sala criada com sucesso.";
+        formCriarSala.reset();
+      }
+    });
+
+    if (formVincularPatrimonioSala) {
+      formVincularPatrimonioSala.addEventListener("submit", async (event) => {
+        event.preventDefault();
+        const salaId = salaVisualizacao.value || "";
+        const patrimonioId = patrimonioVinculoSala ? (patrimonioVinculoSala.value || "") : "";
+        if (!salaId || !patrimonioId) {
+          msgSalaCriada.textContent = "Selecione sala e patrimônio para vincular.";
+          return;
+        }
+        try {
+          const sala = estado.salas.find((item) => item.id === salaId) || {};
+          const localizacao = sala.nome_local && sala.nome_sala
+            ? `${sala.nome_local} - ${sala.nome_sala}`
+            : "--";
+          await db.ref(`salas_patrimonios/${estado.uid}/${salaId}/${patrimonioId}`).set(true);
+          await db.ref(`patrimonios/${patrimonioId}`).update({
+            localizacao_padrao: localizacao,
+            localizacao_atual: localizacao,
+            sala_id_padrao: salaId,
+            sala_id_atual: salaId,
+            atualizado_em: Date.now()
+          });
+          msgSalaCriada.textContent = "Patrimônio vinculado na sala com sucesso.";
+          observarVinculosDaSala();
+        } catch (erro) {
+          msgSalaCriada.textContent = "Erro ao vincular patrimônio na sala.";
+        }
+      });
+    }
+
+    salaVisualizacao.addEventListener("change", observarVinculosDaSala);
+    buscarSalaInput.addEventListener("input", renderTabelaSalas);
+
+    tabelaSalasBody.addEventListener("click", async (event) => {
+      const alvo = event.target;
+      if (!(alvo instanceof HTMLElement)) return;
+
+      if (alvo.classList.contains("btn-editar-sala-linha")) {
+        const salaIdEditar = alvo.getAttribute("data-id") || "";
+        if (!salaIdEditar) return;
+        iniciarEdicaoSala(salaIdEditar);
+        return;
+      }
+
+      if (!alvo.classList.contains("btn-excluir-sala-linha")) return;
+
+      const salaId = alvo.getAttribute("data-id") || "";
+      if (!salaId) return;
+      const confirmou = window.confirm("Deseja realmente excluir esta sala?");
+      if (!confirmou) return;
+      await db.ref(`salas/${estado.uid}/${salaId}`).remove();
+      await db.ref(`salas_patrimonios/${estado.uid}/${salaId}`).remove();
+      msgSalaCriada.textContent = "Sala excluída com sucesso.";
+      if (salaVisualizacao.value === salaId) {
+        salaVisualizacao.value = "";
+      }
+      if (estado.salaEmEdicaoId === salaId) {
+        limparFormularioSala();
+      }
+      observarVinculosDaSala();
+    });
+
+    tabelaPatrimoniosSalaBody.addEventListener("click", (event) => {
+      const alvo = event.target;
+      if (!(alvo instanceof HTMLElement)) return;
+      if (alvo.classList.contains("btn-detalhes-patrimonio-sala")) {
+        const patrimonioId = alvo.getAttribute("data-id") || "";
+        abrirDetalhesPatrimonioSala(patrimonioId);
+      } else if (alvo.classList.contains("btn-excluir-patrimonio-sala")) {
+        const patrimonioId = alvo.getAttribute("data-id") || "";
+        excluirPatrimonioDaSala(patrimonioId);
+      }
+    });
+
+    btnFecharDetalhesSala.addEventListener("click", () => {
+      modalDetalhesSala.style.display = "none";
+    });
+
+    camposObrigatoriosCriarSala.forEach((input) => {
+      input.addEventListener("input", () => {
+        msgSalaCriada.textContent = "";
+      });
+    });
+
+    if (btnCancelarEdicaoSala) {
+      btnCancelarEdicaoSala.addEventListener("click", () => {
+        limparFormularioSala();
+        msgSalaCriada.textContent = "Edição cancelada.";
+      });
+    }
+
+    async function iniciar() {
+      try {
+        if (!auth.currentUser || !auth.currentUser.uid) {
+          await auth.signInAnonymously();
+        }
+      } catch (erro) {
+      }
+      estado.uid = gerarUidSistema();
+      atualizarInterfaceEdicaoSala();
+      carregarSalas();
+      carregarPatrimonios();
+      observarVinculosDaSala();
+    }
+
+    
+
+
+
+
+
+
+
+
+
+    iniciar();
+  </script>
+</body>
+</html>

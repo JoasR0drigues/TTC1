@@ -1,0 +1,107 @@
+{
+  "rules": {
+    ".read": false,
+    ".write": false,
+
+    "usuarios_sistema": {
+      "$uid": {
+        ".read": true,
+        ".write": true
+      }
+    },
+
+    "usuarios": {
+      "$uidTag": {
+        ".read": true,
+        ".write": "newData.hasChildren(['nome']) || !newData.exists()"
+      }
+    },
+
+    "patrimonios": {
+      ".read": true,
+      "$patrimonioId": {
+        ".read": true,
+        ".write": "newData.hasChildren(['id','codigo','nome','uid_tag','usuario_uid']) || !newData.exists()"
+      }
+    },
+
+    "tags_patrimonio": {
+      ".read": true,
+      "$uidTag": {
+        ".read": true,
+        ".write": "newData.hasChildren(['patrimonio_id','patrimonio_nome','patrimonio_codigo']) || !newData.exists()"
+      }
+    },
+
+    "movimentacoes": {
+      ".read": true,
+      "$movId": {
+        ".read": true,
+        ".write": "newData.hasChildren(['tipo','timestamp']) || !newData.exists()"
+      }
+    },
+
+    "salas": {
+      "$uid": {
+        ".read": true,
+        ".write": true
+      }
+    },
+
+    "salas_patrimonios": {
+      "$uid": {
+        ".read": true,
+        ".write": true,
+        "$salaId": {
+          ".read": true,
+          ".write": true,
+          "$patrimonioId": {
+            ".read": true,
+            ".write": true
+          }
+        }
+      }
+    },
+
+    "monitoramento_ultrassonico": {
+      "$uid": {
+        ".read": true,
+        ".write": true,
+        "configuracoes": {
+          "$patrimonioId": {
+            ".read": true,
+            ".write": true
+          }
+        }
+      }
+    },
+
+    "leituras_recentes": {
+      ".indexOn": ["timestamp"],
+      ".read": true,
+      "$leituraId": {
+        ".read": true,
+        ".write": "(auth != null && newData.child('usuario_uid').val() === auth.uid) || (auth == null && newData.hasChildren(['uid', 'timestamp']))"
+      }
+    },
+
+    "acessos": {
+      ".read": true,
+      "$acessoId": {
+        ".read": true,
+        ".write": "(auth != null && newData.child('usuario_uid').val() === auth.uid) || (auth == null && newData.hasChildren(['uid', 'timestamp']))"
+      }
+    },
+
+    "teste_conexao": {
+      "status": {
+        ".read": "auth != null",
+        ".write": "true"
+      },
+      "$uid": {
+        ".read": "auth != null && auth.uid === $uid",
+        ".write": "auth != null && auth.uid === $uid"
+      }
+    }
+  }
+}

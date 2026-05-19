@@ -1,0 +1,439 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Histórico de movimentações</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+  <header class="topo">
+    <div class="logo-texto">
+      <span class="logo-destaque">Proteção</span> Patrimonial RFID
+    </div>
+
+    <nav class="menu">
+    <a href="salas-vinculadas.html">Salas Vinculadas</a>
+    <a href="Patrimônios.html">Patrimônios</a>
+    <a href="historico.html" class="ativo">Histórico</a>
+    <a href="monitoramento-ultrassonico.html">Monitoramento</a>
+    </nav>
+  </header>
+
+  <main>
+    <section class="card historico-card">
+    <h2>Histórico e movimentações</h2>
+    <p class="historico-subtitulo">
+    Histórico consolidado de entradas, saídas, cadastros e movimentações de patrimônios.
+    </p>
+
+      <div class="historico-busca">
+    <label for="busca-historico">Buscar no histórico</label>
+
+       <div class="campo-busca">
+    <span class="icone-busca">🔍</span>
+    <input
+    type="text"
+    id="busca-historico"
+    placeholder="Pesquisar por patrimônio">
+    <button type="button" class="btn-limpar">×</button>
+    </div>
+    </div>
+
+    <div class="tabela-wrapper">
+    <table class="tabela-historico">
+    <thead>
+    <tr>
+    <th>Data/Hora</th>
+    <th>Tipo</th>
+    <th>Patrimônio</th>
+    <th>UID</th>
+    <th>Confirmado por</th>
+    <th>Localização</th>
+    <th>Ações</th>
+    </tr>
+    </thead>
+    <tbody id="historico-body">
+    <tr>
+    <td colspan="7" class="tabela-vazia">Nenhuma movimentação encontrada.</td>
+    </tr>
+    </tbody>
+    </table>
+    </div>
+    </section>
+  </main>
+
+  <section id="modal-detalhes-historico" class="card" style="display:none; position: fixed; inset: 8% 10%; z-index: 999; overflow-y: auto;">
+    <div class="botoes" style="justify-content: flex-end;">
+      <button type="button" class="btn btn-excluir" id="btn-fechar-detalhes-historico">Fechar</button>
+    </div>
+    <h2>Detalhes do patrimônio</h2>
+    <p><strong>Nome:</strong> <span id="detalhe-historico-nome">--</span></p>
+    <p><strong>Código:</strong> <span id="detalhe-historico-codigo">--</span></p>
+    <p><strong>Categoria:</strong> <span id="detalhe-historico-categoria">--</span></p>
+    <p><strong>UID:</strong> <span id="detalhe-historico-uid">--</span></p>
+    <p><strong>Status:</strong> <span id="detalhe-historico-status">--</span></p>
+    <p><strong>Descrição:</strong> <span id="detalhe-historico-descricao">--</span></p>
+    <p><strong>Localização:</strong> <span id="detalhe-historico-localizacao">--</span></p>
+    <div style="margin-top: 12px;">
+      <img id="detalhe-historico-foto" alt="Foto do patrimônio" style="width:100%; max-height:480px; object-fit:contain; border-radius:12px; border:1px solid #ddd6f3; background:#fff;">
+    </div>
+  </section>
+
+  <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-database-compat.js"></script>
+  <script src="firebaseconfig.js"></script>
+  <script src="auth.js"></script>
+  <script>
+    const sessao = AuthApp.protegerPagina({ allowedRoles: ["admin", "comum"] });
+    firebase.initializeApp(window.firebaseConfig);
+
+    const auth = firebase.auth();
+    const db = firebase.database();
+    const buscaHistorico = document.getElementById("busca-historico");
+    const btnLimpar = document.querySelector(".btn-limpar");
+    const historicoBody = document.getElementById("historico-body");
+    const modalDetalhesHistorico = document.getElementById("modal-detalhes-historico");
+    const btnFecharDetalhesHistorico = document.getElementById("btn-fechar-detalhes-historico");
+    const detalheHistoricoNome = document.getElementById("detalhe-historico-nome");
+    const detalheHistoricoCodigo = document.getElementById("detalhe-historico-codigo");
+    const detalheHistoricoCategoria = document.getElementById("detalhe-historico-categoria");
+    const detalheHistoricoUid = document.getElementById("detalhe-historico-uid");
+    const detalheHistoricoStatus = document.getElementById("detalhe-historico-status");
+    const detalheHistoricoDescricao = document.getElementById("detalhe-historico-descricao");
+    const detalheHistoricoLocalizacao = document.getElementById("detalhe-historico-localizacao");
+    const detalheHistoricoFoto = document.getElementById("detalhe-historico-foto");
+    let historicoCompleto = [];
+    let patrimoniosCache = [];
+
+    function formatarDataHora(valor) {
+      const numero = Number(valor || 0);
+      if (!numero) return "--";
+      const ms = numero < 9999999999 ? numero * 1000 : numero;
+      return new Date(ms).toLocaleString("pt-BR");
+    }
+
+    function classeTipo(tipo) {
+      if (tipo === "entrada") return "tipo-badge tipo-entrada";
+      if (tipo === "saida") return "tipo-badge tipo-saida";
+      return "tipo-badge tipo-cadastro";
+    }
+
+    function textoParaFiltro(item) {
+      return [
+        item.tipo,
+        item.patrimonio,
+        item.uid,
+        item.confirmadoPor,
+        item.localizacao
+      ].join(" ").toLowerCase();
+    }
+
+    function renderHistorico(lista) {
+      if (!lista.length) {
+        historicoBody.innerHTML = '<tr><td colspan="7" class="tabela-vazia">Nenhuma movimentação encontrada.</td></tr>';
+        return;
+      }
+
+      historicoBody.innerHTML = lista.map((item) => `
+        <tr>
+          <td>${formatarDataHora(item.timestamp)}</td>
+          <td><span class="${classeTipo(item.tipo)}">${item.tipo}</span></td>
+          <td><strong>${item.patrimonio || "--"}</strong></td>
+          <td>${item.uid || "--"}</td>
+          <td>${item.confirmadoPor || "--"}</td>
+          <td>${item.localizacao || "--"}</td>
+          <td>
+            <div class="acoes-tabela">
+              <button type="button" class="btn btn-editar btn-detalhes-historico" data-uid="${item.uid || ""}" data-patrimonio="${item.patrimonio || ""}" data-localizacao="${item.localizacao || ""}">Detalhes</button>
+              ${sessao?.role === "admin"
+                ? `<button type="button" class="btn btn-excluir btn-excluir-historico" data-id="${item.id || ""}" data-origem="${item.origem || ""}">Excluir</button>`
+                : ""}
+            </div>
+          </td>
+        </tr>
+      `).join("");
+    }
+
+    function normalizarTag(uid) {
+      return String(uid || "").replace(/\s+/g, "").toUpperCase();
+    }
+
+    function formatarTag(uid) {
+      const limpa = normalizarTag(uid);
+      return limpa ? limpa.replace(/(.{2})(?=.)/g, "$1 ").trim() : "--";
+    }
+
+    function coletarRegistrosEmArvore(base, coletor, caminho = "") {
+      if (!base || typeof base !== "object") return;
+      Object.entries(base).forEach(([chave, valor]) => {
+        const caminhoAtual = caminho ? `${caminho}/${chave}` : chave;
+        if (valor && typeof valor === "object" && !Array.isArray(valor)) {
+          coletor(chave, valor, caminhoAtual);
+          coletarRegistrosEmArvore(valor, coletor, caminhoAtual);
+        }
+      });
+    }
+
+    function extrairPatrimonios(dadosPatrimonios) {
+      const mapa = new Map();
+      coletarRegistrosEmArvore(dadosPatrimonios || {}, (chave, valor) => {
+        if (!valor.uid_tag && !valor.nome && !valor.codigo) return;
+        const id = String(valor.id || chave || "");
+        if (!id || mapa.has(id)) return;
+        mapa.set(id, { ...valor, id });
+      });
+      return Array.from(mapa.values());
+    }
+
+    function extrairRegistrosAcesso(dadosAcessos) {
+      const lista = [];
+      coletarRegistrosEmArvore(dadosAcessos || {}, (chave, valor) => {
+        if (!valor?.uid && !valor?.uid_tag) return;
+        const id = String(valor.id || chave || "");
+        lista.push({ id, ...valor });
+      });
+      return lista;
+    }
+
+    function extrairRegistrosLeitura(dadosLeituras) {
+      const lista = [];
+      coletarRegistrosEmArvore(dadosLeituras || {}, (chave, valor) => {
+        if (!valor?.uid && !valor?.uid_tag) return;
+        if (String(valor.tipo_tag || "").toLowerCase() === "ultrassonico") return;
+        const id = String(valor.id || chave || "");
+        lista.push({ id, ...valor });
+      });
+      return lista;
+    }
+
+    function extrairRegistrosMovimentacao(dadosMovimentacoes) {
+      const lista = [];
+      coletarRegistrosEmArvore(dadosMovimentacoes || {}, (chave, valor) => {
+        if (!valor) return;
+        if (!valor.tipo && !valor.patrimonio_nome && !valor.uid_tag) return;
+        const id = String(valor.id || chave || "");
+        lista.push({ id, ...valor });
+      });
+      return lista;
+    }
+
+    function buscarPatrimonioDetalhe(uid, nomeBase) {
+      const uidNormalizada = normalizarTag(uid);
+      return patrimoniosCache.find((item) => normalizarTag(item.uid_tag) === uidNormalizada)
+        || patrimoniosCache.find((item) => String(item.nome || "").toLowerCase() === String(nomeBase || "").toLowerCase())
+        || null;
+    }
+
+    function abrirDetalhesHistorico(uid, patrimonioNome, localizacao) {
+      const patrimonio = buscarPatrimonioDetalhe(uid, patrimonioNome);
+
+      detalheHistoricoNome.textContent = patrimonio?.nome || patrimonioNome || "--";
+      detalheHistoricoCodigo.textContent = patrimonio?.codigo || "--";
+      detalheHistoricoCategoria.textContent = patrimonio?.categoria || "--";
+      detalheHistoricoUid.textContent = formatarTag(uid);
+      detalheHistoricoStatus.textContent = patrimonio?.status_atual || "--";
+      detalheHistoricoDescricao.textContent = patrimonio?.descricao || "--";
+      detalheHistoricoLocalizacao.textContent = patrimonio?.localizacao_atual || localizacao || "--";
+      detalheHistoricoFoto.src = patrimonio?.foto_data_url || "";
+      detalheHistoricoFoto.style.display = patrimonio?.foto_data_url ? "block" : "none";
+      modalDetalhesHistorico.style.display = "block";
+    }
+
+    function aplicarFiltro() {
+      const filtro = (buscaHistorico.value || "").trim().toLowerCase();
+      if (!filtro) {
+        renderHistorico(historicoCompleto);
+        return;
+      }
+      const filtrada = historicoCompleto.filter((item) => textoParaFiltro(item).includes(filtro));
+      renderHistorico(filtrada);
+    }
+
+    function carregarHistorico(snapshotAcessos, snapshotMov) {
+      const acessos = snapshotAcessos.val() || {};
+      const movimentacoes = snapshotMov.val() || {};
+      const itens = [];
+
+      Object.entries(acessos).forEach(([id, item]) => {
+        if (!item?.uid) return;
+        itens.push({
+          id,
+          origem: "acessos",
+          tipo: item.tipo_tag === "usuario" ? "leitura-usuario" : "leitura-tag",
+          patrimonio: item.patrimonio_nome || item.nome || "Tag lida",
+          uid: item.uid || item.uid_key || "--",
+          confirmadoPor: "ESP32",
+          localizacao: item.objeto_detectado ? "Recinto monitorado" : "Sem confirmação",
+          timestamp: item.timestamp || 0
+        });
+      });
+
+      Object.entries(movimentacoes).forEach(([id, item]) => {
+        if (!item) return;
+        itens.push({
+          id,
+          origem: "movimentacoes",
+          tipo: item.tipo || "movimentacao",
+          patrimonio: item.patrimonio_nome || item.patrimonio_codigo || "--",
+          uid: item.uid_tag || "--",
+          confirmadoPor: item.confirmado_por || "--",
+          localizacao: item.tipo === "entrada" ? "Dentro do recinto" : "Fora do recinto",
+          timestamp: item.timestamp || 0
+        });
+      });
+
+      historicoCompleto = itens.sort((a, b) => Number(b.timestamp || 0) - Number(a.timestamp || 0));
+      aplicarFiltro();
+    }
+
+    function carregarHistoricoConsolidado(snapshotAcessos, snapshotLeituras, snapshotMov) {
+      const acessos = extrairRegistrosAcesso(snapshotAcessos.val() || {});
+      const leituras = extrairRegistrosLeitura(snapshotLeituras.val() || {});
+      const movimentacoes = extrairRegistrosMovimentacao(snapshotMov.val() || {});
+      const itens = [];
+      const chavesLeitura = new Set();
+
+      acessos.forEach((item) => {
+        if (!item?.uid && !item?.uid_tag) return;
+        const uidBase = item.uid || item.uid_tag || item.uid_key || "--";
+        const timestampBase = Number(item.timestamp || 0);
+        const patrimonioBase = item.patrimonio_nome || item.patrimonio_codigo || item.nome || "Tag lida";
+        chavesLeitura.add(`${normalizarTag(uidBase)}|${timestampBase}|${String(patrimonioBase).toLowerCase()}`);
+        itens.push({
+          id: item.id || "",
+          origem: "acessos",
+          tipo: item.tipo_tag === "usuario" ? "leitura-usuario" : "leitura-tag",
+          patrimonio: patrimonioBase,
+          uid: uidBase,
+          confirmadoPor: "ESP32",
+          localizacao: item.objeto_detectado ? "Recinto monitorado" : "Sem confirmação",
+          timestamp: timestampBase
+        });
+      });
+
+      leituras.forEach((item) => {
+        if (!item) return;
+        const uidBase = item.uid || item.uid_tag || item.uid_key || "--";
+        const timestampBase = Number(item.timestamp || 0);
+        const patrimonioBase = item.patrimonio_nome || item.patrimonio_codigo || item.nome || "Tag lida";
+        const chave = `${normalizarTag(uidBase)}|${timestampBase}|${String(patrimonioBase).toLowerCase()}`;
+        if (chavesLeitura.has(chave)) return;
+        itens.push({
+          id: item.id || "",
+          origem: "leituras_recentes",
+          tipo: item.tipo_tag === "usuario" ? "leitura-usuario" : "leitura-tag",
+          patrimonio: patrimonioBase,
+          uid: uidBase,
+          confirmadoPor: "ESP32",
+          localizacao: item.objeto_detectado ? "Recinto monitorado" : "Sem confirmação",
+          timestamp: timestampBase
+        });
+      });
+
+      movimentacoes.forEach((item) => {
+        if (!item) return;
+        itens.push({
+          id: item.id || "",
+          origem: "movimentacoes",
+          tipo: item.tipo || "movimentacao",
+          patrimonio: item.patrimonio_nome || item.patrimonio_codigo || "--",
+          uid: item.uid_tag || "--",
+          confirmadoPor: item.confirmado_por || "--",
+          localizacao: item.tipo === "entrada" ? "Dentro do recinto" : "Fora do recinto",
+          timestamp: item.timestamp || 0
+        });
+      });
+
+      historicoCompleto = itens.sort((a, b) => Number(b.timestamp || 0) - Number(a.timestamp || 0));
+      aplicarFiltro();
+    }
+
+    async function excluirRegistroHistorico(id, origem) {
+      if (!id || !origem || sessao?.role !== "admin") return;
+      const caminho = origem === "movimentacoes"
+        ? `movimentacoes/${id}`
+        : (origem === "leituras_recentes" ? `leituras_recentes/${id}` : `acessos/${id}`);
+      await db.ref(caminho).remove();
+    }
+
+    async function iniciar() {
+      try {
+        try {
+          await auth.signInAnonymously();
+        } catch (erroAuth) {
+        }
+
+        db.ref("patrimonios").on("value", (snapshotPatrimonios) => {
+          patrimoniosCache = extrairPatrimonios(snapshotPatrimonios.val() || {});
+        });
+
+        const refsHistorico = {
+          acessos: db.ref("acessos"),
+          leituras: db.ref("leituras_recentes"),
+          movimentacoes: db.ref("movimentacoes")
+        };
+
+        async function recarregarHistoricoConsolidado() {
+          try {
+            const [snapshotAcessos, snapshotLeituras, snapshotMov] = await Promise.all([
+              refsHistorico.acessos.once("value"),
+              refsHistorico.leituras.once("value"),
+              refsHistorico.movimentacoes.once("value")
+            ]);
+            carregarHistoricoConsolidado(snapshotAcessos, snapshotLeituras, snapshotMov);
+          } catch (erroCarga) {
+            historicoBody.innerHTML = '<tr><td colspan="7" class="tabela-vazia">Falha ao carregar histórico do Firebase.</td></tr>';
+          }
+        }
+
+        refsHistorico.acessos.on("value", recarregarHistoricoConsolidado, () => {
+          historicoBody.innerHTML = '<tr><td colspan="7" class="tabela-vazia">Falha ao ler acessos do Firebase.</td></tr>';
+        });
+        refsHistorico.leituras.on("value", recarregarHistoricoConsolidado, () => {
+          historicoBody.innerHTML = '<tr><td colspan="7" class="tabela-vazia">Falha ao ler leituras recentes do Firebase.</td></tr>';
+        });
+        refsHistorico.movimentacoes.on("value", recarregarHistoricoConsolidado, () => {
+          historicoBody.innerHTML = '<tr><td colspan="7" class="tabela-vazia">Falha ao ler movimentações do Firebase.</td></tr>';
+        });
+        recarregarHistoricoConsolidado();
+      } catch (erro) {
+        historicoBody.innerHTML = '<tr><td colspan="7" class="tabela-vazia">Falha ao carregar histórico do Firebase.</td></tr>';
+      }
+    }
+
+    buscaHistorico.addEventListener("input", aplicarFiltro);
+    btnLimpar.addEventListener("click", () => {
+      buscaHistorico.value = "";
+      aplicarFiltro();
+    });
+
+    historicoBody.addEventListener("click", async (event) => {
+      const alvo = event.target;
+      if (!(alvo instanceof HTMLElement)) return;
+      if (alvo.classList.contains("btn-detalhes-historico")) {
+        const uid = alvo.getAttribute("data-uid") || "";
+        const patrimonio = alvo.getAttribute("data-patrimonio") || "";
+        const localizacao = alvo.getAttribute("data-localizacao") || "";
+        abrirDetalhesHistorico(uid, patrimonio, localizacao);
+        return;
+      }
+      if (alvo.classList.contains("btn-excluir-historico")) {
+        const id = alvo.getAttribute("data-id") || "";
+        const origem = alvo.getAttribute("data-origem") || "";
+        const confirmou = window.confirm("Deseja realmente excluir este registro do histórico?");
+        if (!confirmou) return;
+        await excluirRegistroHistorico(id, origem);
+      }
+    });
+
+    btnFecharDetalhesHistorico.addEventListener("click", () => {
+      modalDetalhesHistorico.style.display = "none";
+    });
+
+    iniciar();
+  </script>
+</body>
+</html>
